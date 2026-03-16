@@ -10,6 +10,10 @@ export async function GET() {
     }
     const user = JSON.parse(session.value);
 
+    if (user.role !== 'admin') {
+      return NextResponse.json({ error: 'Access denied. Admins only.' }, { status: 403 });
+    }
+
     const [rows]: any = await pool.query(
       'SELECT * FROM user_settings WHERE user_id = ?',
       [user.id]
@@ -38,6 +42,10 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const user = JSON.parse(session.value);
+
+    if (user.role !== 'admin') {
+      return NextResponse.json({ error: 'Access denied. Admins only.' }, { status: 403 });
+    }
     const data = await req.json();
 
     const { line_notification, line_token, telegram_notification, telegram_chat_id } = data;

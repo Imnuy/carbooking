@@ -25,12 +25,27 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    const fetchSettings = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch('/api/user/settings');
-        if (res.ok) {
-          const data = await res.json();
-          // Convert 1/0 from DB to boolean if necessary, though driver might handle it
+        const [settingsRes, authRes] = await Promise.all([
+          fetch('/api/user/settings'),
+          fetch('/api/auth')
+        ]);
+        
+        if (authRes.ok) {
+          const authData = await authRes.json();
+          if (authData.user.role !== 'admin') {
+            const router = (await import('next/navigation')).useRouter();
+            window.location.href = '/';
+            return;
+          }
+        } else {
+          window.location.href = '/login';
+          return;
+        }
+
+        if (settingsRes.ok) {
+          const data = await settingsRes.json();
           setSettings({
             line_notification: !!data.line_notification,
             line_token: data.line_token || '',
@@ -44,7 +59,7 @@ export default function SettingsPage() {
         setLoading(false);
       }
     };
-    fetchSettings();
+    fetchData();
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {

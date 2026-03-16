@@ -57,6 +57,8 @@ export default function Sidebar() {
     }
   };
 
+  const isAdmin = user?.role === 'admin';
+
   const mainItems = [
     { name: 'หน้าแรก', href: '/', icon: Home },
     { name: 'จองยานพาหนะ', href: '/bookings/add', icon: Plus },
@@ -68,7 +70,7 @@ export default function Sidebar() {
       icon: Key, 
       badge: pendingCount && pendingCount > 0 ? pendingCount : undefined 
     },
-    { name: 'ตั้งค่าการแจ้งเตือน', href: '/settings', icon: Bell },
+    ...(isAdmin ? [{ name: 'ตั้งค่าการแจ้งเตือน', href: '/settings', icon: Bell }] : []),
   ];
 
   const supportItems = [
