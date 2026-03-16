@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS cars (
     model VARCHAR(100) NOT NULL,
     license_plate VARCHAR(50) NOT NULL,
     seats INT,
+    car_type VARCHAR(100),
     status ENUM('available', 'maintenance', 'in_use') DEFAULT 'available',
     image_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -31,12 +32,18 @@ CREATE TABLE IF NOT EXISTS cars (
 CREATE TABLE IF NOT EXISTS bookings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
+    requester_name VARCHAR(255),
+    requester_position VARCHAR(255),
     car_id INT NULL,
     driver_name VARCHAR(150),
+    supervisor_name VARCHAR(255),
+    supervisor_position VARCHAR(255),
     start_time DATETIME NOT NULL,
     end_time DATETIME NOT NULL,
     destination VARCHAR(255) NOT NULL,
     distance DECIMAL(10,2),
+    passengers TEXT,
+    trip_type ENUM('internal', 'external') DEFAULT 'internal',
     status ENUM('pending', 'approved', 'rejected', 'completed', 'cancelled') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(100),
@@ -52,8 +59,8 @@ VALUES
 ('admin', 'admin', 'admin', 'System Admin', 'system'),
 ('user1', 'user1', 'user', 'Staff 1', 'system');
 
-INSERT IGNORE INTO cars (brand, model, license_plate, seats, created_by)
+INSERT IGNORE INTO cars (brand, model, license_plate, seats, car_type, created_by)
 VALUES 
-('Toyota', 'Commuter', 'นข 1234', 12, 'admin'),
-('Honda', 'CR-V', 'กท 5678', 5, 'admin');
+('Toyota', 'Commuter', 'นข 1234', 12, 'รถตู้', 'admin'),
+('Honda', 'CR-V', 'กท 5678', 5, 'รถกระบะ4ประตู', 'admin');
 

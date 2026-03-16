@@ -6,10 +6,22 @@ const pool = mysql.createPool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  charset: 'utf8mb4',
+  charset: process.env.DB_CHARSET || 'utf8mb4',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 });
+
+// Helper function to ensure proper UTF-8 encoding on each connection
+export async function queryWithEncoding(sql: string, params?: any[]) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.query('SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci');
+    const [rows] = await connection.query(sql, params);
+    return rows;
+  } finally {
+    connection.release();
+  }
+}
 
 export default pool;

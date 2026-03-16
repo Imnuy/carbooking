@@ -1,4 +1,4 @@
-import pool from '@/lib/db';
+import pool, { queryWithEncoding } from '@/lib/db';
 import Link from 'next/link';
 import { RowDataPacket } from 'mysql2';
 import { 
@@ -12,9 +12,10 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import CarActions from '@/components/CarActions';
 
 export default async function CarsPage() {
-  const [cars] = await pool.query<RowDataPacket[]>('SELECT * FROM cars ORDER BY id DESC');
+  const cars = await queryWithEncoding('SELECT * FROM cars ORDER BY id DESC') as RowDataPacket[];
 
   return (
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
@@ -52,7 +53,7 @@ export default async function CarsPage() {
               <tr className="bg-slate-50/70">
                 <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">ข้อมูลรถ</th>
                 <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">รายละเอียด</th>
-                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">สถานะว่าง</th>
+                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">ประเภทรถ</th>
                 <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest italic">ดำเนินการ</th>
               </tr>
             </thead>
@@ -82,29 +83,15 @@ export default async function CarsPage() {
                   <td className="px-8 py-6">
                     <span className={cn(
                       "inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm",
-                      car.status === 'available' 
-                        ? 'bg-emerald-50 text-emerald-600' 
-                        : 'bg-rose-50 text-rose-600'
+                      car.car_type === 'รถตู้' 
+                        ? 'bg-indigo-50 text-indigo-600' 
+                        : 'bg-amber-50 text-amber-600'
                     )}>
-                      <span className={cn(
-                        "w-1.5 h-1.5 rounded-full mr-2",
-                        car.status === 'available' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
-                      )}></span>
-                      {car.status === 'available' ? 'ว่าง' : 'ไม่ว่าง'}
+                      {car.car_type || 'ไม่ระบุประเภท'}
                     </span>
                   </td>
                   <td className="px-8 py-6 text-right">
-                    <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-600 hover:text-indigo-600 hover:border-indigo-100 hover:shadow-lg transition-all shadow-sm">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-600 hover:text-amber-500 hover:border-amber-100 hover:shadow-lg transition-all shadow-sm">
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-600 hover:text-rose-500 hover:border-rose-100 hover:shadow-lg transition-all shadow-sm">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <CarActions car={car} />
                   </td>
                 </tr>
               ))}
