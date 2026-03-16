@@ -32,7 +32,7 @@ export default function RootLayout({
             {children}
           </div>
           <footer className="mt-12 pt-8 border-t border-slate-200 text-center text-slate-400 text-xs font-medium italic">
-            © 2026 ระบบจองรถยนต์ออนไลน์ CARGO - พัฒนาเพื่อความสะดวกของบุคลากร
+            © 2026 ระบบจองรถยนต์ออนไลน์ PLKCar - พัฒนาเพื่อความสะดวกของบุคลากร
           </footer>
         </main>
       </body>

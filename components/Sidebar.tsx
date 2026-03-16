@@ -27,7 +27,7 @@ export default function Sidebar() {
         <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/20">
           <Car className="text-white w-6 h-6" />
         </div>
-        <span className="text-2xl font-black tracking-tight text-white italic">CAR<span className="text-blue-500">GO</span></span>
+        <span className="text-2xl font-black tracking-tight text-white italic">PLK<span className="text-blue-500">Car</span></span>
       </div>
       
       <nav className="flex flex-col space-y-1.5 flex-grow">
