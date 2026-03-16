@@ -19,7 +19,14 @@ CREATE TABLE IF NOT EXISTS cars (
     brand VARCHAR(100) NOT NULL,
     model VARCHAR(100) NOT NULL,
     license_plate VARCHAR(50) NOT NULL,
+    car_type VARCHAR(100),
+    color VARCHAR(50),
+    manager VARCHAR(150),
     seats INT,
+    fuel_type VARCHAR(50),
+    act_expiry DATE,
+    insurance_expiry DATE,
+    description TEXT,
     status ENUM('available', 'maintenance', 'in_use') DEFAULT 'available',
     image_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -51,8 +58,7 @@ VALUES
 ('admin', 'admin', 'admin', 'System Admin', 'system'),
 ('user1', 'user1', 'user', 'Staff 1', 'system');
 
-INSERT IGNORE INTO cars (brand, model, license_plate, seats, created_by)
+INSERT IGNORE INTO cars (brand, model, license_plate, car_type, color, manager, seats, fuel_type, act_expiry, insurance_expiry, description, created_by)
 VALUES 
-('Toyota', 'Commuter', 'นข 1234', 12, 'admin'),
-('Honda', 'CR-V', 'กท 5678', 5, 'admin');
-
+('Toyota', 'Commuter', 'นข 1234', 'รถตู้', 'บรอนซ์เงิน', 'นายสมชาย มั่นคง', 12, 'ดีเซล', '2025-06-30', '2025-06-30', 'รถตู้ส่วนกลางสำหรับรับส่งคณะทำงาน', 'admin'),
+('Honda', 'CR-V', 'กท 5678', 'รถยนต์นั่งส่วนบุคคล', 'ดำ', 'นางสาวสมศรี ใจดี', 5, 'เบนซิน', '2025-12-15', '2025-12-15', 'รถประจำตำแหน่งผู้บริหาร', 'admin');
