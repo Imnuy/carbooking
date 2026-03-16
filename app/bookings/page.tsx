@@ -17,7 +17,7 @@ export default async function BookingsPage() {
   const [bookings] = await pool.query<RowDataPacket[]>(
     `SELECT b.*, c.brand, c.model, c.license_plate, u.fullname 
      FROM bookings b 
-     JOIN cars c ON b.car_id = c.id 
+     LEFT JOIN cars c ON b.car_id = c.id 
      JOIN users u ON b.user_id = u.id 
      ORDER BY b.created_at DESC`
   );
@@ -26,12 +26,12 @@ export default async function BookingsPage() {
     <div className="space-y-8 animate-in slide-in-from-right-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight text-nowrap">จัดการใบจองรถ</h1>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight text-nowrap">จัดการใบขอใช้รถ</h1>
           <p className="text-slate-500 font-medium">ตรวจสอบ อนุมัติ และติดตามการใช้รถยนต์ทั้งหมด</p>
         </div>
         <Link href="/bookings/add" className="bg-indigo-600 text-white px-6 py-3.5 rounded-2xl font-bold shadow-2xl shadow-indigo-900/20 flex items-center hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95 group">
           <Plus className="mr-2 w-5 h-5 group-hover:rotate-90 transition-transform" />
-          สร้างการจองใหม่
+          สร้างใบขอใช้รถใหม่
         </Link>
       </div>
 
@@ -63,7 +63,8 @@ export default async function BookingsPage() {
             <thead>
               <tr className="bg-slate-50/50">
                 <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">ผู้ขอใช้งาน</th>
-                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">สถานที่และเหตุผล</th>
+                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">สถานที่และระยะทาง</th>
+                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">รถและคนขับ</th>
                 <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">ระยะเวลา</th>
                 <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest">สถานะ</th>
                 <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest">ดำเนินการ</th>
@@ -76,7 +77,7 @@ export default async function BookingsPage() {
                     <div className="mx-auto w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center mb-4">
                       <Calendar className="w-8 h-8 text-slate-200" />
                     </div>
-                    <h3 className="text-xl font-black text-slate-900">ไม่พบรายการจอง</h3>
+                    <h3 className="text-xl font-black text-slate-900">ไม่พบรายการขอใช้รถ</h3>
                     <p className="text-slate-500 font-medium">รายการที่คุณบันทึกจะปรากฏที่นี่</p>
                   </td>
                 </tr>
@@ -99,7 +100,18 @@ export default async function BookingsPage() {
                         <MapPin className="w-3.5 h-3.5 mr-1.5 text-rose-500" />
                         <span className="truncate">{b.destination}</span>
                       </div>
-                      <div className="text-xs text-slate-400 italic line-clamp-1">"{b.reason || 'ไม่ได้ระบุเหตุผล'}"</div>
+                      <div className="text-xs text-slate-400 font-bold">ระยะทางประมาณ {b.distance} กม.</div>
+                    </td>
+                    <td className="px-8 py-6">
+                      {b.car_id ? (
+                        <div>
+                          <div className="text-sm font-black text-slate-800">{b.brand} {b.model}</div>
+                          <div className="text-[11px] font-bold text-indigo-600 uppercase">{b.license_plate}</div>
+                          <div className="text-[10px] text-slate-400 mt-1">คนขับ: {b.driver_name || 'รอมอบหมาย'}</div>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-slate-400 italic">รอจัดสรรรถและคนขับ</div>
+                      )}
                     </td>
                     <td className="px-8 py-6 text-nowrap">
                       <div className="text-sm font-black text-slate-800">{new Date(b.start_time).toLocaleDateString('th-TH')}</div>

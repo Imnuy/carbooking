@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'ระบบจองรถยนต์ออนไลน์',
-  description: 'ระบบจัดการการจองรถยนต์ของหน่วยงาน',
+  title: 'ระบบขอใช้รถยนต์ออนไลน์',
+  description: 'ระบบจัดการการขอใช้รถยนต์ของหน่วยงาน',
 };
 
 export default function RootLayout({
@@ -32,7 +32,7 @@ export default function RootLayout({
             {children}
           </div>
           <footer className="mt-12 pt-8 border-t border-slate-200 text-center text-slate-400 text-xs font-medium italic">
-            © 2026 ระบบจองรถยนต์ออนไลน์ PLKCar - พัฒนาเพื่อความสะดวกของบุคลากร
+            © 2026 ระบบขอใช้รถยนต์ออนไลน์ PLKCar - พัฒนาเพื่อความสะดวกของบุคลากร
           </footer>
         </main>
       </body>

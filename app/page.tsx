@@ -34,11 +34,11 @@ export default async function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight text-nowrap">ภาพรวมระบบ</h1>
-          <p className="text-slate-500 font-medium">ติดตามและจัดการการจองรถของหน่วยงาน</p>
+          <p className="text-slate-500 font-medium">ติดตามและจัดการการขอใช้รถของหน่วยงาน</p>
         </div>
         <div className="flex space-x-3">
           <Link href="/bookings" className="bg-slate-900 border border-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-xl flex items-center hover:bg-slate-800 transition-all">
-            จัดการการจอง
+            จัดการการขอใช้รถ
             <ArrowRight className="ml-2 w-4 h-4" />
           </Link>
         </div>

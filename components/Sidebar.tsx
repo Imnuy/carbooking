@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 const menuItems = [
   { name: 'แผงควบคุม', href: '/', icon: LayoutDashboard },
   { name: 'จัดการยานพาหนะ', href: '/cars', icon: Car },
-  { name: 'รายการจองรถ', href: '/bookings', icon: CalendarCheck },
+  { name: 'รายการขอใช้รถ', href: '/bookings', icon: CalendarCheck },
   { name: 'จัดการผู้ใช้งาน', href: '/users', icon: Users },
 ];
 
