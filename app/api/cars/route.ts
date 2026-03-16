@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { cookies } from 'next/headers';
 
 // GET all cars
 export async function GET() {
@@ -21,6 +22,12 @@ export async function POST(req: NextRequest) {
       insurance_expiry, description, image_url 
     } = data;
 
+    // Admin check
+    const session = (await cookies()).get('session');
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = JSON.parse(session.value);
+    if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
     const [result]: any = await pool.query(
       `INSERT INTO cars (
         brand, model, license_plate, car_type, color, 
@@ -30,7 +37,7 @@ export async function POST(req: NextRequest) {
       [
         brand, model, license_plate, car_type, color, 
         manager, seats, fuel_type, act_expiry || null, 
-        insurance_expiry || null, description, image_url, 'admin'
+        insurance_expiry || null, description, image_url, user.username
       ]
     );
 

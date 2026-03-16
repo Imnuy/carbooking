@@ -27,6 +27,7 @@ export default function CarsPage() {
   const [cars, setCars] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchCars = async () => {
     try {
@@ -44,6 +45,16 @@ export default function CarsPage() {
 
   useEffect(() => {
     fetchCars();
+    const checkAdmin = async () => {
+      try {
+        const res = await fetch('/api/auth');
+        if (res.ok) {
+          const data = await res.json();
+          setIsAdmin(data.user?.role === 'admin');
+        }
+      } catch (err) {}
+    };
+    checkAdmin();
   }, []);
 
   const handleDelete = async (id: number, name: string) => {
@@ -75,10 +86,12 @@ export default function CarsPage() {
           <h1 className="text-5xl font-black text-slate-900 tracking-tight">การจัดการยานพาหนะ</h1>
           <p className="text-slate-500 font-medium text-lg mt-1 italic">เพิ่ม แก้ไข หรือลบข้อมูลรถยนต์พร้อมรายละเอียดเชิงลึก</p>
         </div>
-        <Link href="/cars/add" className="bg-[#5550e6] text-white px-8 py-4 rounded-2xl font-black text-sm shadow-2xl shadow-indigo-900/20 flex items-center hover:scale-105 active:scale-95 transition-all group">
-          <Plus className="mr-2 w-5 h-5 group-hover:rotate-90 transition-transform" />
-          ลงทะเบียนรถใหม่
-        </Link>
+        {isAdmin && (
+          <Link href="/cars/add" className="bg-[#5550e6] text-white px-8 py-4 rounded-2xl font-black text-sm shadow-2xl shadow-indigo-900/20 flex items-center hover:scale-105 active:scale-95 transition-all group">
+            <Plus className="mr-2 w-5 h-5 group-hover:rotate-90 transition-transform" />
+            ลงทะเบียนรถใหม่
+          </Link>
+        )}
       </div>
 
       <div className="bg-white rounded-[2.5rem] shadow-[0_20px_60px_rgba(0,0,0,0.04)] border border-slate-100 overflow-hidden">
@@ -194,14 +207,16 @@ export default function CarsPage() {
                       </span>
                     </td>
                     <td className="px-10 py-8 text-right">
-                      <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-all">
-                        <Link href={`/cars/edit/${car.id}`} className="p-3 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-amber-500 hover:border-amber-100 hover:shadow-xl transition-all shadow-sm">
-                          <Edit3 className="w-5 h-5" />
-                        </Link>
-                        <button onClick={() => handleDelete(car.id, car.brand + ' ' + car.model)} className="p-3 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-rose-500 hover:border-rose-100 hover:shadow-xl transition-all shadow-sm">
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
+                      {isAdmin && (
+                        <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-all">
+                          <Link href={`/cars/edit/${car.id}`} className="p-3 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-amber-500 hover:border-amber-100 hover:shadow-xl transition-all shadow-sm">
+                            <Edit3 className="w-5 h-5" />
+                          </Link>
+                          <button onClick={() => handleDelete(car.id, car.brand + ' ' + car.model)} className="p-3 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-rose-500 hover:border-rose-100 hover:shadow-xl transition-all shadow-sm">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

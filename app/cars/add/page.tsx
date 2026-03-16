@@ -23,6 +23,22 @@ export default function AddCarPage() {
     description: '',
     image_url: ''
   });
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const res = await fetch('/api/auth');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user?.role !== 'admin') {
+            router.push('/');
+          }
+        } else {
+          router.push('/login');
+        }
+      } catch (err) {}
+    };
+    checkAdmin();
+  }, [router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

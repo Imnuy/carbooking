@@ -42,6 +42,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const user = JSON.parse(session.value);
+    if (user.role !== 'admin') {
+      return NextResponse.json({ error: 'Access denied. Admins only.' }, { status: 403 });
+    }
 
     // Only allow update if status is provided
     if (!status) {
@@ -67,6 +70,13 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+
+    // Admin check
+    const session = (await cookies()).get('session');
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = JSON.parse(session.value);
+    if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
     await pool.query('DELETE FROM bookings WHERE id = ?', [id]);
     return NextResponse.json({ message: 'Booking deleted successfully' });
   } catch (error: any) {

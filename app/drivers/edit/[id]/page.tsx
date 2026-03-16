@@ -36,8 +36,20 @@ export default function EditDriverPage({ params }: { params: Promise<{ id: strin
   });
 
   useEffect(() => {
-    const fetchDriver = async () => {
+    const fetchData = async () => {
       try {
+        const authRes = await fetch('/api/auth');
+        if (authRes.ok) {
+          const authData = await authRes.json();
+          if (authData.user?.role !== 'admin') {
+            router.push('/');
+            return;
+          }
+        } else {
+          router.push('/login');
+          return;
+        }
+
         const res = await fetch(`/api/drivers/${id}`);
         if (res.ok) {
           const data = await res.json();
@@ -47,13 +59,13 @@ export default function EditDriverPage({ params }: { params: Promise<{ id: strin
           alert('ไม่พบข้อมูลพนักงาน');
           router.push('/drivers');
         }
-      } catch (error) {
-        alert('เกิดข้อผิดพลาดในการดึงข้อมูล');
+      } catch (err) {
+        console.error('Failed to fetch data');
       } finally {
         setFetching(false);
       }
     };
-    fetchDriver();
+    fetchData();
   }, [id, router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { cookies } from 'next/headers';
 
 export async function GET(
   req: NextRequest,
@@ -32,6 +33,12 @@ export async function PUT(
       insurance_expiry, description, image_url, status 
     } = data;
 
+    // Admin check
+    const session = (await cookies()).get('session');
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = JSON.parse(session.value);
+    if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
     await pool.query(
       `UPDATE cars SET 
         brand = ?, model = ?, license_plate = ?, car_type = ?, color = ?, 
@@ -42,7 +49,7 @@ export async function PUT(
       [
         brand, model, license_plate, car_type, color, 
         manager, seats, fuel_type, act_expiry || null, 
-        insurance_expiry || null, description, image_url, status, 'admin', id
+        insurance_expiry || null, description, image_url, status, user.username, id
       ]
     );
 
@@ -58,6 +65,12 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    // Admin check
+    const session = (await cookies()).get('session');
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = JSON.parse(session.value);
+    if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
     await pool.query('DELETE FROM bookings WHERE car_id = ?', [id]); // Clear bookings first
     await pool.query('DELETE FROM cars WHERE id = ?', [id]);
     return NextResponse.json({ message: 'Car deleted successfully' });

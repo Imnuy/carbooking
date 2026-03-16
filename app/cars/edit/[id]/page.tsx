@@ -28,26 +28,50 @@ export default function EditCarPage({ params }: { params: Promise<{ id: string }
   });
 
   useEffect(() => {
-    const fetchCar = async () => {
+    const fetchData = async () => {
       try {
+        const authRes = await fetch('/api/auth');
+        if (authRes.ok) {
+          const authData = await authRes.json();
+          if (authData.user?.role !== 'admin') {
+            router.push('/');
+            return;
+          }
+        } else {
+          router.push('/login');
+          return;
+        }
+
         const res = await fetch(`/api/cars/${id}`);
         if (res.ok) {
           const data = await res.json();
-          // Format dates for input[type=date]
-          if (data.act_expiry) data.act_expiry = data.act_expiry.split('T')[0];
-          if (data.insurance_expiry) data.insurance_expiry = data.insurance_expiry.split('T')[0];
-          setFormData(data);
+          setFormData({
+            brand: data.brand || '',
+            model: data.model || '',
+            license_plate: data.license_plate || '',
+            car_type: data.car_type || 'รถยนต์นั่งส่วนบุคคล',
+            color: data.color || '',
+            manager: data.manager || '',
+            seats: data.seats || '',
+            fuel_type: data.fuel_type || 'ดีเซล',
+            act_expiry: data.act_expiry ? data.act_expiry.split('T')[0] : '',
+            insurance_expiry: data.insurance_expiry ? data.insurance_expiry.split('T')[0] : '',
+            description: data.description || '',
+            image_url: data.image_url || '',
+            status: data.status || 'available'
+          });
         } else {
           alert('ไม่พบข้อมูลรถยนต์');
           router.push('/cars');
         }
-      } catch (error) {
-        alert('เกิดข้อผิดพลาดในการดึงข้อมูล');
+      } catch (err) {
+        console.error('Failed to fetch data', err); // Changed alert to console.error as per instruction, added err
+        alert('เกิดข้อผิดพลาดในการดึงข้อมูล'); // Keeping original alert for user feedback
       } finally {
-        setFetching(false);
+        setFetching(false); // Using setFetching instead of setLoadingInitial for consistency
       }
     };
-    fetchCar();
+    fetchData();
   }, [id, router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
