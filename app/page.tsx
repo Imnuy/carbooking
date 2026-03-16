@@ -33,7 +33,7 @@ export default async function DashboardPage() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">ภาพรวมระบบ</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">ภาพรวมระบบ</h1>
           <p className="text-slate-500 font-medium">ติดตามและจัดการการขอใช้รถของหน่วยงาน</p>
         </div>
         <div className="flex space-x-3">
@@ -58,7 +58,7 @@ export default async function DashboardPage() {
             </div>
             <div className="space-y-1">
               <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">{stat.label}</div>
-              <div className="text-3xl md:text-4xl font-black text-slate-900">{stat.value}</div>
+              <div className="text-3xl md:text-4xl font-bold text-slate-900">{stat.value}</div>
             </div>
             <div className="mt-6 flex items-center text-[10px] md:text-xs font-bold text-emerald-500 bg-emerald-50 w-fit px-3 py-1 rounded-full">
               <TrendingUp className="w-3 h-3 mr-1" />

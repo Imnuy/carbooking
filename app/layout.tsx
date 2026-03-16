@@ -1,21 +1,22 @@
 'use client';
 
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Noto_Sans_Thai, Inter } from 'next/font/google';
 import './globals.css';
 import Sidebar from '@/components/Sidebar';
 import { useState } from 'react';
 import { Menu, X, Car } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
+const notoCity = Noto_Sans_Thai({
+  subsets: ['thai', 'latin'],
+  variable: '--font-noto-thai',
+  weight: ['100', '300', '400', '500', '700', '900'],
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const inter = Inter({
   subsets: ['latin'],
+  variable: '--font-inter',
 });
 
 export default function RootLayout({
@@ -27,7 +28,7 @@ export default function RootLayout({
 
   return (
     <html lang="th">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex bg-slate-50 min-h-screen relative overflow-x-hidden`}>
+      <body className={`${notoCity.variable} ${inter.variable} font-sans antialiased flex bg-slate-50 min-h-screen relative overflow-x-hidden`}>
         {/* Mobile Overlay */}
         {isSidebarOpen && (
           <div 
@@ -45,7 +46,7 @@ export default function RootLayout({
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/10">
                 <Car className="text-white w-5 h-5" />
               </div>
-              <span className="text-xl font-black tracking-tight text-slate-900 italic">PLK<span className="text-blue-500">Car</span></span>
+              <span className="text-xl tracking-tight text-slate-900 italic">PLK<span className="text-blue-500">Car</span></span>
             </div>
             <button 
               onClick={() => setIsSidebarOpen(true)}

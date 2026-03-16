@@ -6,6 +6,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { 
       destination, 
+      purpose,
+      fuel_reimbursement,
       distance, 
       start_time, 
       end_time,
@@ -22,6 +24,8 @@ export async function POST(request: Request) {
       `INSERT INTO bookings (
         user_id, 
         destination, 
+        purpose,
+        fuel_reimbursement,
         distance, 
         start_time, 
         end_time, 
@@ -32,10 +36,12 @@ export async function POST(request: Request) {
         passengers,
         trip_type,
         status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
       [
         1, 
         destination, 
+        purpose,
+        fuel_reimbursement,
         distance, 
         start_time, 
         end_time,

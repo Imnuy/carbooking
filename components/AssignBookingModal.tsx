@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Car, User, Check, Loader2, AlertCircle, MoreHorizontal } from 'lucide-react';
+import { X, Car, User, Check, Loader2, AlertCircle, MoreHorizontal, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
@@ -16,6 +16,7 @@ interface AssignModalProps {
   };
   isOpen: boolean;
   onClose: () => void;
+  initialOtherIds?: number[];
 }
 
 interface Car {
@@ -25,11 +26,21 @@ interface Car {
   license_plate: string;
 }
 
-export default function AssignBookingModal({ booking, isOpen, onClose }: AssignModalProps) {
+interface PendingBooking {
+  id: number;
+  requester_name: string;
+  destination: string;
+  start_time: string;
+}
+
+export default function AssignBookingModal({ booking, isOpen, onClose, initialOtherIds = [] }: AssignModalProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [cars, setCars] = useState<Car[]>([]);
+  const [pendingBookings, setPendingBookings] = useState<PendingBooking[]>([]);
   const [fetchingCars, setFetchingCars] = useState(false);
+  const [fetchingPending, setFetchingPending] = useState(false);
+  const [selectedOtherIds, setSelectedOtherIds] = useState<number[]>([]);
   const [formData, setFormData] = useState({
     car_id: booking.car_id || '',
     driver_name: booking.driver_name || '',
@@ -49,12 +60,28 @@ export default function AssignBookingModal({ booking, isOpen, onClose }: AssignM
           console.error(err);
           setFetchingCars(false);
         });
+
+      setFetchingPending(true);
+      fetch('/api/bookings/pending')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            // Filter out current booking
+            setPendingBookings(data.filter((b: any) => b.id !== booking.id));
+          }
+          setFetchingPending(false);
+        })
+        .catch(err => {
+          console.error(err);
+          setFetchingPending(false);
+        });
       
       setFormData({
         car_id: booking.car_id || '',
         driver_name: booking.driver_name || '',
         status: booking.status
       });
+      setSelectedOtherIds(initialOtherIds);
     }
   }, [isOpen, booking]);
 
@@ -69,7 +96,8 @@ export default function AssignBookingModal({ booking, isOpen, onClose }: AssignM
         body: JSON.stringify({
           car_id: formData.car_id || null,
           driver_name: formData.driver_name,
-          status: formData.car_id && formData.driver_name ? 'approved' : formData.status
+          status: formData.car_id && formData.driver_name ? 'approved' : formData.status,
+          other_ids: selectedOtherIds
         })
       });
 
@@ -161,9 +189,58 @@ export default function AssignBookingModal({ booking, isOpen, onClose }: AssignM
             <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 flex items-start space-x-3">
               <AlertCircle className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
               <p className="text-[11px] font-medium text-indigo-700 leading-relaxed italic">
-                เมื่อระบุรถและคนขับครบถ้วน สถานะจะถูกเปลี่ยนเป็น <span className="font-black">"อนุมัติแล้ว"</span> โดยอัตโนมัติ
+                เมื่อระบุรถและคนขับครบถ้วน สถานะจะถูกเปลี่ยนเป็น <span className="font-bold">"อนุมัติแล้ว"</span> โดยอัตโนมัติ
               </p>
             </div>
+
+            {pendingBookings.length > 0 && (
+              <div className="space-y-3 pt-2">
+                <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1 flex items-center">
+                  <Plus className="w-3 h-3 mr-1" /> รวมจัดสรรกับใบขอรถอื่น (ถ้ามี)
+                </label>
+                <div className="max-h-40 overflow-y-auto space-y-2 p-1">
+                  {pendingBookings.map((pb) => (
+                    <label 
+                      key={pb.id}
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-xl border-2 transition-all cursor-pointer",
+                        selectedOtherIds.includes(pb.id)
+                          ? "border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm"
+                          : "border-slate-50 bg-slate-50 text-slate-500 hover:border-slate-200"
+                      )}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <input 
+                          type="checkbox"
+                          className="hidden"
+                          checked={selectedOtherIds.includes(pb.id)}
+                          onChange={() => {
+                            if (selectedOtherIds.includes(pb.id)) {
+                              setSelectedOtherIds(selectedOtherIds.filter(id => id !== pb.id));
+                            } else {
+                              setSelectedOtherIds([...selectedOtherIds, pb.id]);
+                            }
+                          }}
+                        />
+                        <div className={cn(
+                          "w-4 h-4 rounded flex items-center justify-center border transition-all",
+                          selectedOtherIds.includes(pb.id) ? "bg-indigo-600 border-indigo-600" : "border-slate-300"
+                        )}>
+                          {selectedOtherIds.includes(pb.id) && <Check className="w-3 h-3 text-white" />}
+                        </div>
+                        <div className="text-[11px]">
+                          <div className="font-bold">#{pb.id} - {pb.requester_name}</div>
+                          <div className="opacity-70 truncate max-w-[180px]">{pb.destination}</div>
+                        </div>
+                      </div>
+                      <div className="text-[10px] font-bold opacity-60">
+                        {new Date(pb.start_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-4 items-center">
@@ -184,7 +261,7 @@ export default function AssignBookingModal({ booking, isOpen, onClose }: AssignM
               ) : (
                 <Check className="w-5 h-5 mr-3 shadow-sm" />
               )}
-              บันทึกการจัดสรร
+              บันทึกการจัดสรร {selectedOtherIds.length > 0 && `(${selectedOtherIds.length + 1} ใบ)`}
             </button>
           </div>
         </form>

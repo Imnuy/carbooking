@@ -4,7 +4,7 @@ This guide outlines the steps to deploy the Hospital ERP application and synchro
 
 ## 1. Environment Details
 - **Remote Host**: `61.19.112.242` (Port: `2233`)
-- **Web App Path**: `/www/wwwroot/erp2`
+- **Web App Path**: `/www/wwwroot/carbooking`
 - **Database Engine**: PostgreSQL 17.6 (Docker: `supabase_db_erp`)
 - **Package Manager**: Bun
 - **Process Manager**: PM2

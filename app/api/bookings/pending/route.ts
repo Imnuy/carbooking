@@ -5,11 +5,11 @@ import { RowDataPacket } from 'mysql2';
 export async function GET() {
   try {
     const [rows] = await pool.query<RowDataPacket[]>(
-      "SELECT id, brand, model, license_plate, car_type FROM cars WHERE status = 'active'"
+      "SELECT id, requester_name, destination, start_time FROM bookings WHERE status = 'pending' ORDER BY created_at DESC"
     );
     return NextResponse.json(rows);
   } catch (error) {
-    console.error('Error fetching cars:', error);
-    return NextResponse.json({ error: 'Failed to fetch cars' }, { status: 500 });
+    console.error('Error fetching pending bookings:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

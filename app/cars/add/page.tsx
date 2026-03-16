@@ -13,7 +13,8 @@ export default function AddCarPage() {
     model: '',
     license_plate: '',
     seats: '',
-    car_type: 'รถตู้'
+    car_type: 'รถตู้นั่งบรรทุก',
+    status: 'active'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,9 +99,9 @@ export default function AddCarPage() {
               onChange={(e) => setFormData({...formData, car_type: e.target.value})}
               className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 transition-all font-bold text-slate-700 appearance-none cursor-pointer"
             >
-              <option value="รถตู้">รถตู้</option>
-              <option value="รถกระบะ4ประตู">รถกระบะ4ประตู</option>
-              <option value="อื่นๆ">อื่นๆ</option>
+              <option value="รถตู้นั่งบรรทุก">รถตู้นั่งบรรทุก</option>
+              <option value="รถยนต์บรรทุก">รถยนต์บรรทุก</option>
+              <option value="รถยนต์นั่งบรรทุก4ประตู">รถยนต์นั่งบรรทุก4ประตู</option>
             </select>
           </div>
           <div className="space-y-2">
@@ -113,6 +114,18 @@ export default function AddCarPage() {
               className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 transition-all font-bold text-slate-700 placeholder:text-slate-300" 
               placeholder="เช่น 5, 12..." 
             />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">สถานะ</label>
+             <select 
+              required
+              value={formData.status}
+              onChange={(e) => setFormData({...formData, status: e.target.value})}
+              className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 transition-all font-bold text-slate-700 appearance-none cursor-pointer"
+            >
+              <option value="active">ใช้งาน</option>
+              <option value="inactive">ไม่ใช้งาน</option>
+            </select>
           </div>
         </div>
 

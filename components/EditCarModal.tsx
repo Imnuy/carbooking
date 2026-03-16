@@ -26,7 +26,7 @@ export default function EditCarModal({ car, isOpen, onClose }: EditCarModalProps
     model: car.model,
     license_plate: car.license_plate,
     seats: car.seats,
-    car_type: car.car_type || 'รถตู้',
+    car_type: car.car_type || 'รถตู้นั่งบรรทุก',
     status: car.status
   });
 
@@ -36,7 +36,7 @@ export default function EditCarModal({ car, isOpen, onClose }: EditCarModalProps
       model: car.model,
       license_plate: car.license_plate,
       seats: car.seats,
-      car_type: car.car_type || 'รถตู้',
+      car_type: car.car_type || 'รถตู้นั่งบรรทุก',
       status: car.status
     });
   }, [car]);
@@ -150,9 +150,9 @@ export default function EditCarModal({ car, isOpen, onClose }: EditCarModalProps
                 onChange={(e) => setFormData({...formData, car_type: e.target.value})}
                 className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-900 transition-all font-bold text-slate-700 cursor-pointer"
               >
-                <option value="รถตู้">รถตู้</option>
-                <option value="รถกระบะ4ประตู">รถกระบะ4ประตู</option>
-                <option value="อื่นๆ">อื่นๆ</option>
+                <option value="รถตู้นั่งบรรทุก">รถตู้นั่งบรรทุก</option>
+                <option value="รถยนต์บรรทุก">รถยนต์บรรทุก</option>
+                <option value="รถยนต์นั่งบรรทุก4ประตู">รถยนต์นั่งบรรทุก4ประตู</option>
               </select>
             </div>
             <div className="space-y-2">
@@ -163,9 +163,8 @@ export default function EditCarModal({ car, isOpen, onClose }: EditCarModalProps
                 onChange={(e) => setFormData({...formData, status: e.target.value})}
                 className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-900 transition-all font-bold text-slate-700 cursor-pointer"
               >
-                <option value="available">ว่าง</option>
-                <option value="maintenance">ซ่อมบำรุง</option>
-                <option value="in_use">ใช้งานอยู่</option>
+                <option value="active">ใช้งาน</option>
+                <option value="inactive">ไม่ใช้งาน</option>
               </select>
             </div>
           </div>

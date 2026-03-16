@@ -3,19 +3,20 @@ import pool from '@/lib/db';
 
 export async function GET() {
   try {
-    console.log('Migrating car status...');
+    console.log('Migrating car status (safe mode)...');
     
-    // First, modify the column to be a simple string temporarily to allow data migration
-    await pool.query('ALTER TABLE cars MODIFY COLUMN status VARCHAR(50)');
+    // 1. Add new column
+    await pool.query('ALTER TABLE cars ADD COLUMN status_new VARCHAR(20) DEFAULT "active"');
     
-    // Update existing data
-    // Map 'available' and 'in_use' to 'active'
-    // Map 'maintenance' to 'inactive'
-    await pool.query("UPDATE cars SET status = 'active' WHERE status IN ('available', 'in_use')");
-    await pool.query("UPDATE cars SET status = 'inactive' WHERE status = 'maintenance' OR status IS NULL");
+    // 2. Map data
+    await pool.query("UPDATE cars SET status_new = 'active' WHERE status IN ('available', 'in_use', 'active') OR status IS NULL");
+    await pool.query("UPDATE cars SET status_new = 'inactive' WHERE status IN ('maintenance', 'inactive')");
     
-    // Change back to new ENUM
-    await pool.query("ALTER TABLE cars MODIFY COLUMN status ENUM('active', 'inactive') DEFAULT 'active'");
+    // 3. Drop old column
+    await pool.query('ALTER TABLE cars DROP COLUMN status');
+    
+    // 4. Rename new column to status
+    await pool.query('ALTER TABLE cars CHANGE COLUMN status_new status VARCHAR(20) DEFAULT "active"');
     
     console.log('Car status migration successful');
     return NextResponse.json({ message: 'Car status migration successful' });

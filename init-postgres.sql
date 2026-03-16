@@ -1,0 +1,78 @@
+-- PostgreSQL schema for carbooking database
+
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+    fullname VARCHAR(150),
+    department VARCHAR(150),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(100),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(100)
+);
+
+-- Cars table
+CREATE TABLE IF NOT EXISTS cars (
+    id SERIAL PRIMARY KEY,
+    brand VARCHAR(100) NOT NULL,
+    model VARCHAR(100) NOT NULL,
+    license_plate VARCHAR(50) NOT NULL,
+    seats INTEGER,
+    car_type VARCHAR(100),
+    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    image_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(100),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(100)
+);
+
+-- Bookings table
+CREATE TABLE IF NOT EXISTS bookings (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    requester_name VARCHAR(255),
+    requester_position VARCHAR(255),
+    car_id INTEGER REFERENCES cars(id),
+    driver_name VARCHAR(150),
+    supervisor_name VARCHAR(255),
+    supervisor_position VARCHAR(255),
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    destination VARCHAR(255) NOT NULL,
+    purpose TEXT,
+    fuel_reimbursement VARCHAR(100),
+    distance DECIMAL(10,2),
+    passengers TEXT,
+    trip_type VARCHAR(20) DEFAULT 'internal' CHECK (trip_type IN ('internal', 'external')),
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'completed', 'cancelled')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(100),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(100)
+);
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON bookings(user_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_car_id ON bookings(car_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
+CREATE INDEX IF NOT EXISTS idx_bookings_start_time ON bookings(start_time);
+CREATE INDEX IF NOT EXISTS idx_cars_license_plate ON cars(license_plate);
+CREATE INDEX IF NOT EXISTS idx_cars_status ON cars(status);
+
+-- Create trigger for updated_at timestamp (PostgreSQL doesn't have ON UPDATE CURRENT_TIMESTAMP like MySQL)
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Apply the trigger to all tables
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_cars_updated_at BEFORE UPDATE ON cars FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_bookings_updated_at BEFORE UPDATE ON bookings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

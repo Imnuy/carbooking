@@ -13,30 +13,23 @@ import {
   Briefcase, 
   MapPin, 
   Gauge, 
-  Trash2, 
-  UserPlus,
   Compass,
   Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface Passenger {
-  name: string;
-  position: string;
-}
-
 export default function AddBookingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [passengers, setPassengers] = useState<Passenger[]>([
-    { name: '', position: '' }
-  ]);
+  const [passengerCount, setPassengerCount] = useState(1);
   const [formData, setFormData] = useState({
     requester_name: '',
     requester_position: '',
     supervisor_name: '',
     supervisor_position: '',
     destination: '',
+    purpose: '',
+    fuel_reimbursement: 'หน่วยงานต้นสังกัด',
     distance: '',
     trip_type: 'internal',
     start_time: (() => {
@@ -53,29 +46,13 @@ export default function AddBookingPage() {
     })(),
   });
 
-  const addPassenger = () => {
-    setPassengers([...passengers, { name: '', position: '' }]);
-  };
-
-  const removePassenger = (index: number) => {
-    if (passengers.length > 1) {
-      const newPassengers = passengers.filter((_, i) => i !== index);
-      setPassengers(newPassengers);
-    }
-  };
-
-  const updatePassenger = (index: number, field: keyof Passenger, value: string) => {
-    const newPassengers = [...passengers];
-    newPassengers[index][field] = value;
-    setPassengers(newPassengers);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
-    // Clean up empty rows before sending
-    const validPassengers = passengers.filter(p => p.name.trim() || p.position.trim());
+    // Store as an array of empty objects to maintain compatibility with existing display logic
+    // Or store as {"count": N}
+    const passengersData = JSON.stringify(new Array(passengerCount).fill({}));
     
     try {
       const response = await fetch('/api/bookings', {
@@ -83,7 +60,7 @@ export default function AddBookingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          passengers: JSON.stringify(validPassengers)
+          passengers: passengersData
         })
       });
 
@@ -109,8 +86,8 @@ export default function AddBookingPage() {
             <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
           </Link>
           <div>
-            <h1 className="text-2xl md:text-4xl font-black text-slate-900 tracking-tight">สร้างใบขอใช้รถใหม่</h1>
-            <p className="text-xs md:text-sm text-slate-500 font-medium italic">ระบุรายละเอียดการขอใช้งานและพนักงานผู้ร่วมเดินทาง</p>
+            <h1 className="text-2xl md:text-4xl font-bold text-slate-900 tracking-tight">สร้างใบขอใช้รถใหม่</h1>
+            <p className="text-xs md:text-sm text-slate-500 font-medium italic">ระบุรายละเอียดการขอใช้งานและจำนวนผู้โดยสาร</p>
           </div>
         </div>
       </div>
@@ -122,7 +99,7 @@ export default function AddBookingPage() {
             <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-50 rounded-lg md:rounded-xl flex items-center justify-center text-indigo-600">
               <User className="w-4 h-4 md:w-5 md:h-5" />
             </div>
-            <h2 className="text-lg md:text-xl font-black text-slate-800">ข้อมูลผู้ขอและผู้ควบคุม</h2>
+            <h2 className="text-lg md:text-xl font-bold text-slate-800">ข้อมูลผู้ขอและผู้ควบคุม</h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
@@ -140,7 +117,7 @@ export default function AddBookingPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center">
+              <label className="text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1 flex items-center">
                 <Briefcase className="w-3 h-3 mr-1" /> ตำแหน่ง ผู้ขอ
               </label>
               <input 
@@ -236,6 +213,52 @@ export default function AddBookingPage() {
                 placeholder="ระบุสถานที่..." 
               />
             </div>
+            <div className="md:col-span-2 space-y-2">
+              <label className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">วัตถุประสงค์การไป</label>
+              <textarea 
+                required
+                rows={3}
+                value={formData.purpose}
+                onChange={(e) => setFormData({...formData, purpose: e.target.value})}
+                className="w-full px-5 md:px-6 py-3 md:py-4 bg-slate-50 border-none rounded-xl md:rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 text-sm md:text-base resize-none" 
+                placeholder="ระบุวัตถุประสงค์การเดินทาง..." 
+              />
+            </div>
+            
+            <div className="md:col-span-2 space-y-4">
+              <label className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center">
+                <Gauge className="w-3 h-3 mr-1" /> การเบิกค่าเชื้อเพลิง
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                <button 
+                  type="button"
+                  onClick={() => setFormData({...formData, fuel_reimbursement: 'หน่วยงานต้นสังกัด'})}
+                  className={cn(
+                    "flex items-center justify-between px-6 py-4 rounded-2xl border-2 transition-all font-bold text-sm",
+                    formData.fuel_reimbursement === 'หน่วยงานต้นสังกัด' 
+                      ? "border-emerald-600 bg-emerald-50 text-emerald-700 shadow-lg shadow-emerald-900/5" 
+                      : "border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-200"
+                  )}
+                >
+                  <span>เบิกจากหน่วยงานต้นสังกัด</span>
+                  {formData.fuel_reimbursement === 'หน่วยงานต้นสังกัด' && <Check className="w-4 h-4" />}
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setFormData({...formData, fuel_reimbursement: 'หน่วยงานผู้จัด'})}
+                  className={cn(
+                    "flex items-center justify-between px-6 py-4 rounded-2xl border-2 transition-all font-bold text-sm",
+                    formData.fuel_reimbursement === 'หน่วยงานผู้จัด' 
+                      ? "border-emerald-600 bg-emerald-50 text-emerald-700 shadow-lg shadow-emerald-900/5" 
+                      : "border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-200"
+                  )}
+                >
+                  <span>เบิกจากหน่วยงานผู้จัด</span>
+                  {formData.fuel_reimbursement === 'หน่วยงานผู้จัด' && <Check className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center">
                 <Gauge className="w-3 h-3 mr-1" /> ระยะทางโดยประมาณ (กม.)
@@ -278,76 +301,31 @@ export default function AddBookingPage() {
           </div>
         </div>
 
-        {/* Section 3: Passengers Data Grid */}
+        {/* Section 3: Passenger Count */}
         <div className="bg-white rounded-3xl md:rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-10">
-          <div className="flex items-center justify-between mb-6 md:mb-8">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-emerald-50 rounded-lg md:rounded-xl flex items-center justify-center text-emerald-600">
-                <Users className="w-4 h-4 md:w-5 md:h-5" />
-              </div>
-              <h2 className="text-lg md:text-xl font-black text-slate-800">รายชื่อผู้ร่วมเดินทาง</h2>
+          <div className="flex items-center space-x-3 mb-6 md:mb-8">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-emerald-50 rounded-lg md:rounded-xl flex items-center justify-center text-emerald-600">
+              <Users className="w-4 h-4 md:w-5 md:h-5" />
             </div>
+            <h2 className="text-lg md:text-xl font-black text-slate-800">จำนวนผู้โดยสาร</h2>
           </div>
 
-          <div className="overflow-x-auto border border-slate-100 rounded-2xl md:rounded-3xl">
-            <table className="min-w-full divide-y divide-slate-100 border-collapse">
-              <thead className="bg-slate-50/50">
-                <tr>
-                  <th className="px-4 md:px-6 py-4 text-left text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">ลำดับ</th>
-                  <th className="px-4 md:px-6 py-4 text-left text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">ชื่อ-นามสกุล</th>
-                  <th className="px-4 md:px-6 py-4 text-left text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">ตำแหน่ง</th>
-                  <th className="px-4 md:px-6 py-4 text-center text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">ลบ</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-50">
-                {passengers.map((passenger, index) => (
-                  <tr key={index} className="group hover:bg-slate-50/30 transition-colors">
-                    <td className="px-4 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm font-bold text-slate-400">
-                      {index + 1}
-                    </td>
-                    <td className="px-4 md:px-6 py-2">
-                      <input 
-                        type="text" 
-                        value={passenger.name}
-                        onChange={(e) => updatePassenger(index, 'name', e.target.value)}
-                        placeholder="ระบุชื่อ..."
-                        className="w-full bg-transparent border-none focus:ring-0 text-xs md:text-sm font-bold text-slate-700 placeholder:text-slate-300"
-                      />
-                    </td>
-                    <td className="px-4 md:px-6 py-2">
-                      <input 
-                        type="text" 
-                        value={passenger.position}
-                        onChange={(e) => updatePassenger(index, 'position', e.target.value)}
-                        placeholder="ตำแหน่ง..."
-                        className="w-full bg-transparent border-none focus:ring-0 text-xs md:text-sm font-bold text-slate-700 placeholder:text-slate-300"
-                      />
-                    </td>
-                    <td className="px-4 md:px-6 py-2 text-center">
-                      <button 
-                        type="button"
-                        onClick={() => removePassenger(index)}
-                        disabled={passengers.length === 1}
-                        className="p-2 md:p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg md:rounded-xl transition-all disabled:opacity-0"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          <div className="mt-6 flex justify-center">
-             <button 
-              type="button" 
-              onClick={addPassenger}
-              className="bg-emerald-600 text-white px-8 py-3.5 rounded-2xl font-black text-sm flex items-center hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-900/10 active:scale-95 group"
-            >
-              <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform" />
-              เพิ่มรายชื่อ
-            </button>
+          <div className="max-w-xs space-y-4">
+            <div className="flex items-center space-x-4">
+              <input 
+                required
+                type="number" 
+                min="1"
+                max="50"
+                value={passengerCount}
+                onChange={(e) => setPassengerCount(parseInt(e.target.value) || 1)}
+                className="w-full px-6 py-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-600 transition-all font-bold text-2xl text-emerald-700 text-center" 
+              />
+              <span className="text-xl font-bold text-slate-500">คน</span>
+            </div>
+            <p className="text-[11px] text-slate-400 font-bold uppercase italic ml-2">
+              * กรุณาระบุจำนวนผู้ร่วมเดินทางทั้งหมด (ไม่รวมพนักงานขับรถ)
+            </p>
           </div>
         </div>
 

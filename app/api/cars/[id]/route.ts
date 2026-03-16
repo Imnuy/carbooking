@@ -11,7 +11,7 @@ export async function PATCH(
 
     await pool.query(
       'UPDATE cars SET brand = ?, model = ?, license_plate = ?, seats = ?, car_type = ?, status = ? WHERE id = ?',
-      [brand, model, license_plate, seats, car_type, status || 'available', id]
+      [brand, model, license_plate, seats, car_type, status || 'active', id]
     );
 
     return NextResponse.json({ message: 'Car updated successfully' });

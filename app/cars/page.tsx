@@ -1,6 +1,5 @@
 import pool, { queryWithEncoding } from '@/lib/db';
 import Link from 'next/link';
-import { RowDataPacket } from 'mysql2';
 import { 
   Car, 
   Plus, 
@@ -15,7 +14,7 @@ import { cn } from '@/lib/utils';
 import CarActions from '@/components/CarActions';
 
 export default async function CarsPage() {
-  const cars = await queryWithEncoding('SELECT * FROM cars ORDER BY id DESC') as RowDataPacket[];
+  const cars = await queryWithEncoding('SELECT * FROM cars ORDER BY id DESC');
 
   return (
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
@@ -52,8 +51,9 @@ export default async function CarsPage() {
             <thead>
               <tr className="bg-slate-50/70">
                 <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">ข้อมูลรถ</th>
-                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">รายละเอียด</th>
+                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">เลขทะเบียน</th>
                 <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">ประเภทรถ</th>
+                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">สถานะ</th>
                 <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest italic">ดำเนินการ</th>
               </tr>
             </thead>
@@ -67,27 +67,41 @@ export default async function CarsPage() {
                       </div>
                       <div>
                         <div className="text-lg font-black text-slate-900">{car.brand} {car.model}</div>
-                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">{car.license_plate}</div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center">
+                           <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                           {car.seats} ที่นั่ง
+                        </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-8 py-6">
-                    <div className="space-y-1">
-                      <div className="flex items-center text-sm font-bold text-slate-700">
-                        <svg className="w-3.5 h-3.5 mr-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                        {car.seats} ที่นั่ง
-                      </div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-nowrap">รถยนต์ส่วนกลาง</div>
+                    <div className="text-sm font-black text-slate-900 bg-slate-100 px-3 py-1.5 rounded-lg inline-block border border-slate-200 shadow-sm">
+                      {car.license_plate}
                     </div>
                   </td>
                   <td className="px-8 py-6">
                     <span className={cn(
                       "inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm",
-                      car.car_type === 'รถตู้' 
-                        ? 'bg-indigo-50 text-indigo-600' 
-                        : 'bg-amber-50 text-amber-600'
+                      car.car_type === 'รถตู้นั่งบรรทุก' ? 'bg-indigo-50 text-indigo-600' : 
+                      car.car_type === 'รถยนต์บรรทุก' ? 'bg-amber-50 text-amber-600' :
+                      car.car_type === 'รถยนต์นั่งบรรทุก4ประตู' ? 'bg-emerald-50 text-emerald-600' :
+                      'bg-slate-50 text-slate-600'
                     )}>
                       {car.car_type || 'ไม่ระบุประเภท'}
+                    </span>
+                  </td>
+                  <td className="px-8 py-6">
+                    <span className={cn(
+                      "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black shadow-sm",
+                      car.status === 'active' 
+                        ? 'bg-emerald-50 text-emerald-600' 
+                        : 'bg-rose-50 text-rose-600'
+                    )}>
+                      <span className={cn(
+                        "w-1.5 h-1.5 rounded-full mr-2",
+                        car.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'
+                      )}></span>
+                      {car.status === 'active' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
                     </span>
                   </td>
                   <td className="px-8 py-6 text-right">

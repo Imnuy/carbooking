@@ -1,4 +1,4 @@
-CREATE DATABASE IF NOT EXISTS carbooking;
+CREATE DATABASE IF NOT EXISTS carbooking CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE carbooking;
 
 CREATE TABLE IF NOT EXISTS users (
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_by VARCHAR(100),
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     updated_by VARCHAR(100)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS cars (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -21,13 +21,13 @@ CREATE TABLE IF NOT EXISTS cars (
     license_plate VARCHAR(50) NOT NULL,
     seats INT,
     car_type VARCHAR(100),
-    status ENUM('available', 'maintenance', 'in_use') DEFAULT 'available',
+    status ENUM('active', 'inactive') DEFAULT 'active',
     image_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(100),
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     updated_by VARCHAR(100)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS bookings (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS bookings (
     start_time DATETIME NOT NULL,
     end_time DATETIME NOT NULL,
     destination VARCHAR(255) NOT NULL,
+    purpose TEXT,
+    fuel_reimbursement VARCHAR(100),
     distance DECIMAL(10,2),
     passengers TEXT,
     trip_type ENUM('internal', 'external') DEFAULT 'internal',
@@ -51,7 +53,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     updated_by VARCHAR(100),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE SET NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Insert a default admin user and test data
 INSERT IGNORE INTO users (username, password, role, fullname, created_by)
