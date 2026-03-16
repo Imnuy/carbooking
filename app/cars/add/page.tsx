@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, ArrowLeft, Car, Camera, Info, User, Fuel, Calendar, Palette, Scissors, Loader2 } from 'lucide-react';
+import { Plus, ArrowLeft, Car, Camera, Info, User, Fuel, Calendar, Palette, Scissors, Loader2, X } from 'lucide-react';
 
 export default function AddCarPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     brand: '',
@@ -22,6 +23,21 @@ export default function AddCarPage() {
     description: '',
     image_url: ''
   });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('ขนาดไฟล์ต้องไม่เกิน 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, image_url: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,30 +82,50 @@ export default function AddCarPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Image Upload Placeholder */}
+        {/* Image Upload */}
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.03)] border border-slate-100 p-8 text-center flex flex-col items-center">
             <h3 className="text-[13px] font-black uppercase tracking-widest text-slate-400 mb-6">รูปภาพรถยนต์</h3>
-            <div className="w-full aspect-square bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center hover:bg-slate-100/50 transition-all cursor-pointer group relative overflow-hidden">
+            
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileChange} 
+              accept="image/*" 
+              className="hidden" 
+            />
+
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full aspect-square bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center hover:bg-slate-100/50 transition-all cursor-pointer group relative overflow-hidden"
+            >
               {formData.image_url ? (
-                <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
+                <>
+                  <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Camera className="w-10 h-10 text-white" />
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFormData(prev => ({ ...prev, image_url: '' }));
+                    }}
+                    className="absolute top-4 right-4 p-2 bg-rose-500 text-white rounded-xl shadow-lg hover:scale-110 transition-transform"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </>
               ) : (
                 <>
                   <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform mb-4">
                     <Camera className="w-8 h-8 text-slate-400" />
                   </div>
                   <p className="text-sm font-bold text-slate-400">คลิกเพื่ออัปโหลดรูปภาพ</p>
+                  <p className="text-[10px] text-slate-300 mt-2 font-medium">PNG, JPG สูงสุด 5MB</p>
                 </>
               )}
             </div>
-            <input 
-              type="text" 
-              name="image_url"
-              value={formData.image_url}
-              onChange={handleChange}
-              placeholder="URL รูปภาพ (ตัวอย่าง)" 
-              className="mt-4 w-full px-4 py-2 bg-slate-50 border-none rounded-xl text-xs font-bold text-slate-500 focus:ring-1 focus:ring-indigo-600"
-            />
           </div>
         </div>
 
@@ -105,15 +141,15 @@ export default function AddCarPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">ยี่ห้อรถ</label>
-                  <input required name="brand" value={formData.brand} onChange={handleChange} type="text" className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 placeholder:text-slate-300" placeholder="เช่น Toyota, Honda..." />
+                  <input required name="brand" value={formData.brand} onChange={handleChange} type="text" className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700" placeholder="เช่น Toyota, Honda..." />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">รุ่นรถ</label>
-                  <input required name="model" value={formData.model} onChange={handleChange} type="text" className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 placeholder:text-slate-300" placeholder="เช่น Commuter, Accord..." />
+                  <input required name="model" value={formData.model} onChange={handleChange} type="text" className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700" placeholder="เช่น Commuter, Accord..." />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">ทะเบียนรถ</label>
-                  <input required name="license_plate" value={formData.license_plate} onChange={handleChange} type="text" className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 placeholder:text-slate-300" placeholder="เช่น กข 1234..." />
+                  <input required name="license_plate" value={formData.license_plate} onChange={handleChange} type="text" className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700" placeholder="เช่น กข 1234..." />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">ประเภทรถ</label>
