@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   Home, 
   Plus, 
@@ -18,26 +18,43 @@ import { cn } from '@/lib/utils';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [pendingCount, setPendingCount] = useState<number | null>(null);
+  const [user, setUser] = useState<{fullname: string, role: string} | null>(null);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch('/api/bookings/stats');
-        if (res.ok) {
-          const data = await res.json();
-          setPendingCount(data.pendingCount);
+        // Fetch pending stats
+        const statsRes = await fetch('/api/bookings/stats');
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          setPendingCount(statsData.pendingCount);
+        }
+
+        // Fetch current user session
+        const authRes = await fetch('/api/auth');
+        if (authRes.ok) {
+          const authData = await authRes.json();
+          setUser(authData.user);
         }
       } catch (error) {
-        console.error('Failed to fetch booking stats');
+        console.error('Failed to fetch sidebar data');
       }
     };
     
-    fetchStats();
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchStats, 30000);
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleLogout = async () => {
+    if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
+      await fetch('/api/auth', { method: 'DELETE' });
+      router.push('/login');
+      router.refresh();
+    }
+  };
 
   const mainItems = [
     { name: 'หน้าแรก', href: '/', icon: Home },
@@ -56,14 +73,38 @@ export default function Sidebar() {
     { name: 'แจ้งปัญหา/ข้อเสนอแนะ', href: '/support', icon: HelpCircle },
   ];
 
-  const accountItems = [
-    { name: 'เข้าสู่ระบบ', href: '/login', icon: LogIn },
-  ];
+  const accountItems = user 
+    ? [{ name: 'ออกจากระบบ', href: '#', icon: LogIn, onClick: handleLogout }]
+    : [{ name: 'เข้าสู่ระบบ', href: '/login', icon: LogIn }];
 
   const NavLink = ({ item }: { item: any }) => {
     const isActive = pathname === item.href;
     const Icon = item.icon;
     
+    const content = (
+      <div className="flex items-center space-x-4">
+        <Icon className={cn(
+          "w-6 h-6",
+          isActive ? "text-white" : "text-slate-500"
+        )} />
+        <span>{item.name}</span>
+      </div>
+    );
+
+    if (item.onClick) {
+      return (
+        <button 
+          onClick={item.onClick}
+          className={cn(
+            "w-full group flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 ease-in-out font-bold text-[15px]",
+            "text-slate-600 hover:bg-rose-50 hover:text-rose-600"
+          )}
+        >
+          {content}
+        </button>
+      );
+    }
+
     return (
       <Link 
         href={item.href} 
@@ -74,13 +115,7 @@ export default function Sidebar() {
             : "text-slate-600 hover:bg-slate-50"
         )}
       >
-        <div className="flex items-center space-x-4">
-          <Icon className={cn(
-            "w-6 h-6",
-            isActive ? "text-white" : "text-slate-500"
-          )} />
-          <span>{item.name}</span>
-        </div>
+        {content}
         {item.badge !== undefined && (
           <span className={cn(
             "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black animate-in zoom-in duration-300",
@@ -98,12 +133,20 @@ export default function Sidebar() {
       {/* Profile Header Card */}
       <div className="bg-[#f8faff] rounded-2xl p-6 mb-8 flex items-center space-x-4 border border-indigo-50/50 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-16 h-16 bg-white/50 rounded-bl-full -translate-y-2 translate-x-2"></div>
-        <div className="w-14 h-14 bg-[#5550e6] rounded-full flex items-center justify-center shadow-lg shadow-indigo-200">
-          <User className="text-white w-8 h-8 opacity-90" />
+        <div className="w-14 h-14 bg-[#5550e6] rounded-full flex items-center justify-center shadow-lg shadow-indigo-200 overflow-hidden">
+          {user ? (
+            <div className="font-black text-white text-xl uppercase">{user.fullname.substring(0, 1)}</div>
+          ) : (
+            <UserIcon className="text-white w-8 h-8 opacity-90" />
+          )}
         </div>
         <div className="flex-1">
-          <h2 className="text-lg font-black text-slate-900 leading-tight">ผู้เยี่ยมชม</h2>
-          <p className="text-slate-400 text-sm font-bold mt-0.5">กรุณาเข้าสู่ระบบ</p>
+          <h2 className="text-lg font-black text-slate-900 leading-tight">
+            {user ? user.fullname : 'ผู้เยี่ยมชม'}
+          </h2>
+          <p className="text-slate-400 text-xs font-bold mt-0.5 uppercase tracking-wider">
+            {user ? user.role : 'กรุณาเข้าสู่ระบบ'}
+          </p>
         </div>
       </div>
       
