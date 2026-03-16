@@ -27,8 +27,13 @@ export default function RootLayout({
     <html lang="th">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex bg-slate-50 min-h-screen`}>
         <Sidebar />
-        <main className="flex-1 p-8 overflow-y-auto w-full max-w-7xl mx-auto text-slate-900">
-          {children}
+        <main className="flex-1 p-8 overflow-y-auto w-full max-w-7xl mx-auto text-slate-900 flex flex-col">
+          <div className="flex-grow">
+            {children}
+          </div>
+          <footer className="mt-12 pt-8 border-t border-slate-200 text-center text-slate-400 text-xs font-medium italic">
+            © 2026 ระบบจองรถยนต์ออนไลน์ CARGO - พัฒนาเพื่อความสะดวกของบุคลากร
+          </footer>
         </main>
       </body>
     </html>
