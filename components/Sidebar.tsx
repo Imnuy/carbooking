@@ -10,12 +10,14 @@ import {
   Key, 
   HelpCircle, 
   LogIn,
-  User
+  User,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const mainItems = [
   { name: 'หน้าแรก', href: '/', icon: Home },
+  { name: 'ปฏิทินการจอง', href: '/', icon: CalendarIcon }, // Home has the calendar
   { name: 'จองยานพาหนะ', href: '/bookings/add', icon: Plus },
   { name: 'รายการรถ', href: '/cars', icon: Building2 },
   { name: 'พนักงานขับรถ', href: '/drivers', icon: UserIcon },
