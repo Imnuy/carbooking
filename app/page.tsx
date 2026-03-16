@@ -1,5 +1,4 @@
-import pool from '@/lib/db';
-import { RowDataPacket } from 'mysql2';
+import pool, { queryWithEncoding } from '@/lib/db';
 import { 
   Car, 
   Users as UsersIcon, 
@@ -12,10 +11,10 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 export default async function DashboardPage() {
-  const [carRows] = await pool.query<RowDataPacket[]>('SELECT COUNT(*) as count FROM cars');
-  const [userRows] = await pool.query<RowDataPacket[]>('SELECT COUNT(*) as count FROM users');
-  const [bookingRows] = await pool.query<RowDataPacket[]>("SELECT COUNT(*) as count FROM bookings WHERE status = 'pending'");
-  const [recentBookings] = await pool.query<RowDataPacket[]>(
+  const carRows = await queryWithEncoding('SELECT COUNT(*) as count FROM cars');
+  const userRows = await queryWithEncoding('SELECT COUNT(*) as count FROM users');
+  const bookingRows = await queryWithEncoding("SELECT COUNT(*) as count FROM bookings WHERE status = 'pending'");
+  const recentBookings = await queryWithEncoding(
     `SELECT b.*, c.brand, c.model, c.license_plate, u.fullname 
      FROM bookings b 
      LEFT JOIN cars c ON b.car_id = c.id 

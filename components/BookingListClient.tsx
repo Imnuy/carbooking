@@ -137,12 +137,21 @@ export default function BookingListClient({ initialBookings, sort, order }: Book
               ) : (
                 initialBookings.map((b: any) => {
                   const isSelected = selectedIds.includes(b.id);
-                  let passengerCount = 0;
+                  let passengerCount = b.passengers || 0;
                   try {
-                    const parsed = JSON.parse(b.passengers);
-                    passengerCount = Array.isArray(parsed) ? parsed.length : (b.passengers?.split(/[,\n]/).filter(Boolean).length || 0);
+                    // If passengers is stored as integer, use it directly
+                    if (typeof b.passengers === 'number') {
+                      passengerCount = b.passengers;
+                    } else if (typeof b.passengers === 'string') {
+                      // Handle legacy string format
+                      const parsed = JSON.parse(b.passengers);
+                      passengerCount = Array.isArray(parsed) ? parsed.length : (b.passengers.split(/[,\n]/).filter(Boolean).length || 0);
+                    }
                   } catch {
-                    passengerCount = b.passengers?.split(/[,\n]/).filter(Boolean).length || 0;
+                    // Fallback for string format
+                    if (typeof b.passengers === 'string') {
+                      passengerCount = b.passengers.split(/[,\n]/).filter(Boolean).length || 0;
+                    }
                   }
 
                   return (
@@ -244,12 +253,21 @@ export default function BookingListClient({ initialBookings, sort, order }: Book
           ) : (
             initialBookings.map((b: any) => {
               const isSelected = selectedIds.includes(b.id);
-              let passengerCount = 0;
+              let passengerCount = b.passengers || 0;
               try {
-                const parsed = JSON.parse(b.passengers);
-                passengerCount = Array.isArray(parsed) ? parsed.length : (b.passengers?.split(/[,\n]/).filter(Boolean).length || 0);
+                // If passengers is stored as integer, use it directly
+                if (typeof b.passengers === 'number') {
+                  passengerCount = b.passengers;
+                } else if (typeof b.passengers === 'string') {
+                  // Handle legacy string format
+                  const parsed = JSON.parse(b.passengers);
+                  passengerCount = Array.isArray(parsed) ? parsed.length : (b.passengers.split(/[,\n]/).filter(Boolean).length || 0);
+                }
               } catch {
-                passengerCount = b.passengers?.split(/[,\n]/).filter(Boolean).length || 0;
+                // Fallback for string format
+                if (typeof b.passengers === 'string') {
+                  passengerCount = b.passengers.split(/[,\n]/).filter(Boolean).length || 0;
+                }
               }
               
               return (

@@ -1,5 +1,4 @@
-import pool from '@/lib/db';
-import { RowDataPacket } from 'mysql2';
+import pool, { queryWithEncoding } from '@/lib/db';
 import BookingListClient from '@/components/BookingListClient';
 
 export default async function BookingsPage({
@@ -15,7 +14,7 @@ export default async function BookingsPage({
   const orderBy = validSortColumns.includes(sort) ? `b.${sort}` : 'b.created_at';
   const sortOrder = order === 'asc' ? 'ASC' : 'DESC';
 
-  const [bookings] = await pool.query<RowDataPacket[]>(
+  const bookings = await queryWithEncoding(
     `SELECT b.*, c.brand, c.model, c.license_plate, u.fullname as owner_name 
      FROM bookings b 
      LEFT JOIN cars c ON b.car_id = c.id 

@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     purpose TEXT,
     fuel_reimbursement VARCHAR(100),
     distance DECIMAL(10,2),
-    passengers TEXT,
+    passengers INTEGER,
     trip_type VARCHAR(20) DEFAULT 'internal' CHECK (trip_type IN ('internal', 'external')),
     status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'completed', 'cancelled')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
