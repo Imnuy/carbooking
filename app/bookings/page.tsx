@@ -1,4 +1,5 @@
 import pool from '@/lib/db';
+import Link from 'next/link';
 import { RowDataPacket } from 'mysql2';
 import { 
   Plus, 
@@ -28,10 +29,10 @@ export default async function BookingsPage() {
           <h1 className="text-4xl font-black text-slate-900 tracking-tight text-nowrap">จัดการใบจองรถ</h1>
           <p className="text-slate-500 font-medium">ตรวจสอบ อนุมัติ และติดตามการใช้รถยนต์ทั้งหมด</p>
         </div>
-        <button className="bg-indigo-600 text-white px-6 py-3.5 rounded-2xl font-bold shadow-2xl shadow-indigo-900/20 flex items-center hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95 group">
+        <Link href="/bookings/add" className="bg-indigo-600 text-white px-6 py-3.5 rounded-2xl font-bold shadow-2xl shadow-indigo-900/20 flex items-center hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95 group">
           <Plus className="mr-2 w-5 h-5 group-hover:rotate-90 transition-transform" />
           สร้างการจองใหม่
-        </button>
+        </Link>
       </div>
 
       <div className="bg-white rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-slate-100 overflow-hidden">
