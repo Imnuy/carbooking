@@ -1,4 +1,5 @@
 import pool from '@/lib/db';
+import Link from 'next/link';
 import { RowDataPacket } from 'mysql2';
 import { 
   UserPlus, 
@@ -21,10 +22,10 @@ export default async function UsersPage() {
           <h1 className="text-4xl font-black text-slate-900 tracking-tight text-nowrap">รายชื่อผู้ใช้งาน</h1>
           <p className="text-slate-500 font-medium">จัดการสิทธิ์การเข้าถึงและข้อมูลบุคลากร</p>
         </div>
-        <button className="bg-emerald-600 text-white px-6 py-3.5 rounded-2xl font-bold shadow-2xl shadow-emerald-900/20 flex items-center hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95 group">
+        <Link href="/users/add" className="bg-emerald-600 text-white px-6 py-3.5 rounded-2xl font-bold shadow-2xl shadow-emerald-900/20 flex items-center hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95 group">
           <UserPlus className="mr-2 w-5 h-5 transition-transform group-hover:rotate-12" />
           เพิ่มผู้ใช้
-        </button>
+        </Link>
       </div>
 
       <div className="bg-white rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-slate-100 overflow-hidden">

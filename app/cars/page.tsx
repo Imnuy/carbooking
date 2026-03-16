@@ -1,4 +1,5 @@
 import pool from '@/lib/db';
+import Link from 'next/link';
 import { RowDataPacket } from 'mysql2';
 import { 
   Car, 
@@ -22,10 +23,10 @@ export default async function CarsPage() {
           <h1 className="text-4xl font-black text-slate-900 tracking-tight">การจัดการยานพาหนะ</h1>
           <p className="text-slate-500 font-medium">เพิ่ม แก้ไข หรือลบข้อมูลรถยนต์ในหน่วยงาน</p>
         </div>
-        <button className="bg-slate-900 text-white px-6 py-3.5 rounded-2xl font-bold shadow-2xl flex items-center hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 group">
+        <Link href="/cars/add" className="bg-slate-900 text-white px-6 py-3.5 rounded-2xl font-bold shadow-2xl flex items-center hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 group">
           <Plus className="mr-2 w-5 h-5 group-hover:rotate-90 transition-transform" />
           เพิ่มรถใหม่
-        </button>
+        </Link>
       </div>
 
       <div className="bg-white rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-slate-100 overflow-hidden">
