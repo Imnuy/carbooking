@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -15,24 +16,49 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const mainItems = [
-  { name: 'หน้าแรก', href: '/', icon: Home },
-  { name: 'จองยานพาหนะ', href: '/bookings/add', icon: Plus },
-  { name: 'รายการรถ', href: '/cars', icon: Building2 },
-  { name: 'พนักงานขับรถ', href: '/drivers', icon: UserIcon },
-  { name: 'รายการรถรออนุมัติ', href: '/bookings', icon: Key, badge: 3 },
-];
-
-const supportItems = [
-  { name: 'แจ้งปัญหา/ข้อเสนอแนะ', href: '/support', icon: HelpCircle },
-];
-
-const accountItems = [
-  { name: 'เข้าสู่ระบบ', href: '/login', icon: LogIn },
-];
-
 export default function Sidebar() {
   const pathname = usePathname();
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('/api/bookings/stats');
+        if (res.ok) {
+          const data = await res.json();
+          setPendingCount(data.pendingCount);
+        }
+      } catch (error) {
+        console.error('Failed to fetch booking stats');
+      }
+    };
+    
+    fetchStats();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const mainItems = [
+    { name: 'หน้าแรก', href: '/', icon: Home },
+    { name: 'จองยานพาหนะ', href: '/bookings/add', icon: Plus },
+    { name: 'รายการรถ', href: '/cars', icon: Building2 },
+    { name: 'พนักงานขับรถ', href: '/drivers', icon: UserIcon },
+    { 
+      name: 'รายการรถรออนุมัติ', 
+      href: '/bookings', 
+      icon: Key, 
+      badge: pendingCount && pendingCount > 0 ? pendingCount : undefined 
+    },
+  ];
+
+  const supportItems = [
+    { name: 'แจ้งปัญหา/ข้อเสนอแนะ', href: '/support', icon: HelpCircle },
+  ];
+
+  const accountItems = [
+    { name: 'เข้าสู่ระบบ', href: '/login', icon: LogIn },
+  ];
 
   const NavLink = ({ item }: { item: any }) => {
     const isActive = pathname === item.href;
@@ -55,9 +81,9 @@ export default function Sidebar() {
           )} />
           <span>{item.name}</span>
         </div>
-        {item.badge && (
+        {item.badge !== undefined && (
           <span className={cn(
-            "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black",
+            "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black animate-in zoom-in duration-300",
             isActive ? "bg-[#f14336] text-white" : "bg-red-500 text-white"
           )}>
             {item.badge}
