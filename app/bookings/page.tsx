@@ -78,8 +78,10 @@ export default function BookingsPage() {
   };
 
   const filteredBookings = bookings.filter(b => {
-    const matchesSearch = b.fullname.toLowerCase().includes(search.toLowerCase()) || 
-                         b.destination.toLowerCase().includes(search.toLowerCase());
+    const fullName = b.fullname || '';
+    const destination = b.destination || '';
+    const matchesSearch = fullName.toLowerCase().includes(search.toLowerCase()) || 
+                         destination.toLowerCase().includes(search.toLowerCase());
     
     if (activeTab === 'ทั้งหมด') return matchesSearch;
     if (activeTab === 'รออนุมัติ') return matchesSearch && b.status === 'pending';
@@ -169,7 +171,7 @@ export default function BookingsPage() {
                     <td className="px-10 py-8">
                       <div className="flex items-center space-x-4">
                         <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#5550e6] font-black text-lg shadow-sm">
-                          {b.fullname.charAt(0)}
+                          {(b.fullname || '').charAt(0)}
                         </div>
                         <div>
                           <div className="font-black text-slate-900">{b.fullname}</div>

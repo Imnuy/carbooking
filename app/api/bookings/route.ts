@@ -4,7 +4,7 @@ import pool from '@/lib/db';
 export async function GET() {
   try {
     const [rows] = await pool.query(`
-      SELECT b.*, c.brand, c.model, c.license_plate, u.fullname as user_fullname 
+      SELECT b.*, c.brand, c.model, c.license_plate, u.fullname as fullname 
       FROM bookings b 
       JOIN cars c ON b.car_id = c.id 
       JOIN users u ON b.user_id = u.id 

@@ -12,6 +12,7 @@ import {
   HelpCircle, 
   LogIn,
   User,
+  Bell,
   Calendar as CalendarIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -67,6 +68,7 @@ export default function Sidebar() {
       icon: Key, 
       badge: pendingCount && pendingCount > 0 ? pendingCount : undefined 
     },
+    { name: 'ตั้งค่าการแจ้งเตือน', href: '/settings', icon: Bell },
   ];
 
   const supportItems = [
