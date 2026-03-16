@@ -47,3 +47,13 @@ next-env.d.ts
 
 # playwright-mcp
 .playwright-mcp/
+
+# screenshots and test artifacts
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.md:not(README.md)
+*snapshot.md
+!init-db.sql
+*.heapsnapshot
