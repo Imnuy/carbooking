@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
-import { RowDataPacket } from 'mysql2';
+import pool, { queryWithEncoding } from '@/lib/db';
 
 export async function GET() {
   try {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      "SELECT id, brand, model, license_plate, car_type FROM cars WHERE status = 'active'"
+    const rows = await queryWithEncoding(
+      "SELECT id, brand, model, license_plate, car_type FROM cars WHERE is_active = true"
     );
     return NextResponse.json(rows);
   } catch (error) {

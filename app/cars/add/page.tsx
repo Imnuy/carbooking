@@ -14,7 +14,7 @@ export default function AddCarPage() {
     license_plate: '',
     seats: '',
     car_type: 'รถตู้นั่งบรรทุก',
-    status: 'active'
+    is_active: true
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,12 +119,12 @@ export default function AddCarPage() {
             <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">สถานะ</label>
              <select 
               required
-              value={formData.status}
-              onChange={(e) => setFormData({...formData, status: e.target.value})}
+              value={formData.is_active ? 'true' : 'false'}
+              onChange={(e) => setFormData({...formData, is_active: e.target.value === 'true'})}
               className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 transition-all font-bold text-slate-700 appearance-none cursor-pointer"
             >
-              <option value="active">ใช้งาน</option>
-              <option value="inactive">ไม่ใช้งาน</option>
+              <option value="true">ใช้งาน</option>
+              <option value="false">ไม่ใช้งาน</option>
             </select>
           </div>
         </div>

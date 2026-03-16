@@ -1,6 +1,5 @@
-import pool from '@/lib/db';
+import pool, { queryWithEncoding } from '@/lib/db';
 import Link from 'next/link';
-import { RowDataPacket } from 'mysql2';
 import { 
   UserPlus, 
   Search, 
@@ -13,7 +12,7 @@ import {
 import { cn } from '@/lib/utils';
 
 export default async function UsersPage() {
-  const [users] = await pool.query<RowDataPacket[]>('SELECT id, username, role, fullname, department, created_at FROM users ORDER BY id DESC');
+  const users = await queryWithEncoding('SELECT id, username, role, fullname, department, created_at FROM users ORDER BY id DESC');
 
   return (
     <div className="space-y-8 animate-in zoom-in duration-500">

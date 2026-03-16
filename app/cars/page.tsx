@@ -93,15 +93,15 @@ export default async function CarsPage() {
                   <td className="px-8 py-6">
                     <span className={cn(
                       "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black shadow-sm",
-                      car.status === 'active' 
+                      car.is_active 
                         ? 'bg-emerald-50 text-emerald-600' 
                         : 'bg-rose-50 text-rose-600'
                     )}>
                       <span className={cn(
                         "w-1.5 h-1.5 rounded-full mr-2",
-                        car.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'
+                        car.is_active ? 'bg-emerald-500' : 'bg-rose-500'
                       )}></span>
-                      {car.status === 'active' ? 'ใช้งาน' : 'ไม่ใช้งาน'}
+                      {car.is_active ? 'ใช้งาน' : 'ไม่ใช้งาน'}
                     </span>
                   </td>
                   <td className="px-8 py-6 text-right">

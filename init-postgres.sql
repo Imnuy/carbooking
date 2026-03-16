@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS cars (
     license_plate VARCHAR(50) NOT NULL,
     seats INTEGER,
     car_type VARCHAR(100),
-    status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    is_active BOOLEAN DEFAULT true,
     image_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(100),
@@ -55,13 +55,26 @@ CREATE TABLE IF NOT EXISTS bookings (
     updated_by VARCHAR(100)
 );
 
+-- Drivers table
+CREATE TABLE IF NOT EXISTS drivers (
+    id SERIAL PRIMARY KEY,
+    fullname VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    note TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(100),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(100)
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON bookings(user_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_car_id ON bookings(car_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 CREATE INDEX IF NOT EXISTS idx_bookings_start_time ON bookings(start_time);
 CREATE INDEX IF NOT EXISTS idx_cars_license_plate ON cars(license_plate);
-CREATE INDEX IF NOT EXISTS idx_cars_status ON cars(status);
+CREATE INDEX IF NOT EXISTS idx_cars_is_active ON cars(is_active);
+CREATE INDEX IF NOT EXISTS idx_drivers_is_active ON drivers(is_active);
 
 -- Create trigger for updated_at timestamp (PostgreSQL doesn't have ON UPDATE CURRENT_TIMESTAMP like MySQL)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -76,3 +89,4 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_cars_updated_at BEFORE UPDATE ON cars FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_bookings_updated_at BEFORE UPDATE ON bookings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_drivers_updated_at BEFORE UPDATE ON drivers FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

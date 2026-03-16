@@ -6,14 +6,14 @@ import { FileText } from 'lucide-react';
 
 interface BookingData {
   id: number;
-  fullname: string;
+  requester_name: string;
   brand: string;
   model: string;
   license_plate: string;
   destination: string;
   start_time: string;
   end_time: string;
-  reason: string;
+  purpose: string;
 }
 
 export default function ExportBookingDoc({ booking }: { booking: BookingData }) {
@@ -37,38 +37,39 @@ export default function ExportBookingDoc({ booking }: { booking: BookingData }) 
           new Paragraph({
             children: [
               new TextRun({ text: `ผู้ขอใช้รถ: `, bold: true }),
-              new TextRun(booking.fullname),
+              new TextRun(booking.requester_name || 'ไม่ระบุชื่อ'),
+            ],
+            alignment: AlignmentType.RIGHT,
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: `จุดประสงค์: `, bold: true }),
+              new TextRun(booking.purpose || "ไม่ระบุ"),
             ],
             spacing: { before: 200 },
           }),
           new Paragraph({
             children: [
-              new TextRun({ text: `จุดประสงค์: `, bold: true }),
-              new TextRun(booking.reason || "ไม่ระบุ"),
-            ],
-          }),
-          new Paragraph({
-            children: [
               new TextRun({ text: `สถานที่ไป: `, bold: true }),
-              new TextRun(booking.destination),
+              new TextRun(booking.destination || "ไม่ระบุ"),
             ],
           }),
           new Paragraph({
             children: [
               new TextRun({ text: `รถยนต์: `, bold: true }),
-              new TextRun(`${booking.brand} ${booking.model} (ทะเบียน ${booking.license_plate})`),
+              new TextRun(`${booking.brand || 'ไม่ระบุ'} ${booking.model || 'ไม่ระบุ'} (ทะเบียน ${booking.license_plate || 'ไม่ระบุ'})`),
             ],
           }),
           new Paragraph({
             children: [
               new TextRun({ text: `ตั้งแต่วันที่: `, bold: true }),
-              new TextRun(new Date(booking.start_time).toLocaleString('th-TH')),
+              new TextRun(booking.start_time ? new Date(booking.start_time).toLocaleString('th-TH') : 'ไม่ระบุ'),
             ],
           }),
           new Paragraph({
             children: [
               new TextRun({ text: `ถึงวันที่: `, bold: true }),
-              new TextRun(new Date(booking.end_time).toLocaleString('th-TH')),
+              new TextRun(booking.end_time ? new Date(booking.end_time).toLocaleString('th-TH') : 'ไม่ระบุ'),
             ],
           }),
           new Paragraph({

@@ -12,7 +12,7 @@ interface EditCarModalProps {
     license_plate: string;
     seats: number;
     car_type: string;
-    status: string;
+    is_active: boolean;
   };
   isOpen: boolean;
   onClose: () => void;
@@ -27,7 +27,7 @@ export default function EditCarModal({ car, isOpen, onClose }: EditCarModalProps
     license_plate: car.license_plate,
     seats: car.seats,
     car_type: car.car_type || 'รถตู้นั่งบรรทุก',
-    status: car.status
+    is_active: car.is_active
   });
 
   useEffect(() => {
@@ -37,7 +37,7 @@ export default function EditCarModal({ car, isOpen, onClose }: EditCarModalProps
       license_plate: car.license_plate,
       seats: car.seats,
       car_type: car.car_type || 'รถตู้นั่งบรรทุก',
-      status: car.status
+      is_active: car.is_active
     });
   }, [car]);
 
@@ -159,12 +159,12 @@ export default function EditCarModal({ car, isOpen, onClose }: EditCarModalProps
               <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">สถานะ</label>
               <select 
                 required
-                value={formData.status}
-                onChange={(e) => setFormData({...formData, status: e.target.value})}
+                value={formData.is_active ? 'true' : 'false'}
+                onChange={(e) => setFormData({...formData, is_active: e.target.value === 'true'})}
                 className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-900 transition-all font-bold text-slate-700 cursor-pointer"
               >
-                <option value="active">ใช้งาน</option>
-                <option value="inactive">ไม่ใช้งาน</option>
+                <option value="true">ใช้งาน</option>
+                <option value="false">ไม่ใช้งาน</option>
               </select>
             </div>
           </div>

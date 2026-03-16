@@ -22,7 +22,7 @@ export default function BookingActions({ booking, passengerCount, view }: Bookin
   if (view === 'mobile') {
     return (
       <div className="flex space-x-2">
-        <ExportBookingDoc booking={booking} />
+        {booking.status === 'approved' && <ExportBookingDoc booking={booking} />}
         <button 
           onClick={() => setIsModalOpen(true)}
           className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
@@ -40,7 +40,7 @@ export default function BookingActions({ booking, passengerCount, view }: Bookin
 
   return (
     <div className="flex items-center justify-end space-x-2">
-      <ExportBookingDoc booking={booking} />
+      {booking.status === 'approved' && <ExportBookingDoc booking={booking} />}
       <button className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors" title="อนุมัติ">
         <CheckCircle2 className="w-5 h-5" />
       </button>

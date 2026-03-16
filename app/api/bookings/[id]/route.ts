@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import pool, { queryWithEncoding } from '@/lib/db';
 
 export async function PATCH(
   request: Request,
@@ -10,15 +10,15 @@ export async function PATCH(
     const id = params.id;
 
     // Update main booking
-    await pool.query(
-      'UPDATE bookings SET car_id = ?, driver_name = ?, status = ? WHERE id = ?',
+    await queryWithEncoding(
+      'UPDATE bookings SET car_id = $1, driver_name = $2, status = $3 WHERE id = $4',
       [car_id || null, driver_name || null, status || 'pending', id]
     );
 
     // Update other bookings if provided
     if (Array.isArray(other_ids) && other_ids.length > 0) {
-      await pool.query(
-        'UPDATE bookings SET car_id = ?, driver_name = ?, status = ? WHERE id IN (?)',
+      await queryWithEncoding(
+        'UPDATE bookings SET car_id = $1, driver_name = $2, status = $3 WHERE id = ANY($4)',
         [car_id || null, driver_name || null, status || 'pending', other_ids]
       );
     }

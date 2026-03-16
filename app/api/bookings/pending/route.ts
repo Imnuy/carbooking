@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
-import { RowDataPacket } from 'mysql2';
+import pool, { queryWithEncoding } from '@/lib/db';
 
 export async function GET() {
   try {
-    const [rows] = await pool.query<RowDataPacket[]>(
+    const rows = await queryWithEncoding(
       "SELECT id, requester_name, destination, start_time FROM bookings WHERE status = 'pending' ORDER BY created_at DESC"
     );
     return NextResponse.json(rows);

@@ -65,7 +65,7 @@ export default function BookingListClient({ initialBookings, sort, order }: Book
               className="bg-emerald-600 text-white px-6 py-3.5 rounded-2xl font-bold shadow-2xl shadow-emerald-900/20 flex items-center hover:bg-emerald-700 transition-all hover:scale-105 active:scale-95 group justify-center animate-in zoom-in duration-300"
             >
               <Car className="mr-2 w-5 h-5" />
-              จัดรถที่เลือก ({selectedIds.length})
+              จัดรถ ({selectedIds.length})
             </button>
           )}
           <Link href="/bookings/add" className="bg-indigo-600 text-white px-6 py-3.5 rounded-2xl font-bold shadow-2xl shadow-indigo-900/20 flex items-center hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95 group justify-center">
