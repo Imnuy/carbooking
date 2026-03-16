@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Car Booking System',
-  description: 'Corporate Car Booking Management',
+  title: 'ระบบจองรถยนต์ออนไลน์',
+  description: 'ระบบจัดการการจองรถยนต์ของหน่วยงาน',
 };
 
 export default function RootLayout({
@@ -24,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="th">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex bg-slate-50 min-h-screen`}>
         <Sidebar />
         <main className="flex-1 p-8 overflow-y-auto w-full max-w-7xl mx-auto text-slate-900">

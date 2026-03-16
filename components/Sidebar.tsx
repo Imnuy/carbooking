@@ -7,16 +7,15 @@ import {
   Car, 
   CalendarCheck, 
   Users, 
-  Settings,
   LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Manage Cars', href: '/cars', icon: Car },
-  { name: 'Bookings', href: '/bookings', icon: CalendarCheck },
-  { name: 'Users', href: '/users', icon: Users },
+  { name: 'แผงควบคุม', href: '/', icon: LayoutDashboard },
+  { name: 'จัดการยานพาหนะ', href: '/cars', icon: Car },
+  { name: 'รายการจองรถ', href: '/bookings', icon: CalendarCheck },
+  { name: 'จัดการผู้ใช้งาน', href: '/users', icon: Users },
 ];
 
 export default function Sidebar() {
@@ -60,7 +59,7 @@ export default function Sidebar() {
       <div className="pt-6 border-t border-slate-900 mt-auto">
         <button className="flex items-center space-x-3 px-4 py-3 w-full rounded-xl hover:bg-red-900/20 hover:text-red-400 transition-all duration-200 text-slate-500 font-medium group">
           <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          <span>Logout</span>
+          <span>ออกจากระบบ</span>
         </button>
         <div className="mt-4 px-4 text-[10px] uppercase tracking-widest text-slate-600 font-bold">
           Admin v1.2.0

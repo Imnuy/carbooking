@@ -19,12 +19,12 @@ export default async function CarsPage() {
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Vehicle Management</h1>
-          <p className="text-slate-500 font-medium">Add, edit, or remove vehicles from your corporate fleet</p>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">การจัดการยานพาหนะ</h1>
+          <p className="text-slate-500 font-medium">เพิ่ม แก้ไข หรือลบข้อมูลรถยนต์ในหน่วยงาน</p>
         </div>
         <button className="bg-slate-900 text-white px-6 py-3.5 rounded-2xl font-bold shadow-2xl flex items-center hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 group">
           <Plus className="mr-2 w-5 h-5 group-hover:rotate-90 transition-transform" />
-          Add Vehicle
+          เพิ่มรถใหม่
         </button>
       </div>
 
@@ -34,7 +34,7 @@ export default async function CarsPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search by license plate or model..." 
+              placeholder="ค้นหาด้วยทะเบียนหรือรุ่น..." 
               className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
             />
           </div>
@@ -49,10 +49,10 @@ export default async function CarsPage() {
           <table className="min-w-full">
             <thead>
               <tr className="bg-slate-50/70">
-                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">Vehicle Info</th>
-                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">Specifications</th>
-                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">Availability</th>
-                <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest italic">Quick Actions</th>
+                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">ข้อมูลรถ</th>
+                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">รายละเอียด</th>
+                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">สถานะว่าง</th>
+                <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest italic">ดำเนินการ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -72,10 +72,10 @@ export default async function CarsPage() {
                   <td className="px-8 py-6">
                     <div className="space-y-1">
                       <div className="flex items-center text-sm font-bold text-slate-700">
-                        <UsersIcon className="w-3.5 h-3.5 mr-2 text-slate-400" />
-                        {car.seats} Seats
+                        <svg className="w-3.5 h-3.5 mr-2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                        {car.seats} ที่นั่ง
                       </div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Premium Class</div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-nowrap">รถยนต์ส่วนกลาง</div>
                     </div>
                   </td>
                   <td className="px-8 py-6">
@@ -89,7 +89,7 @@ export default async function CarsPage() {
                         "w-1.5 h-1.5 rounded-full mr-2",
                         car.status === 'available' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
                       )}></span>
-                      {car.status}
+                      {car.status === 'available' ? 'ว่าง' : 'ไม่ว่าง'}
                     </span>
                   </td>
                   <td className="px-8 py-6 text-right">
@@ -115,21 +115,13 @@ export default async function CarsPage() {
                 <AlertCircle className="w-12 h-12 text-slate-300" />
               </div>
               <div className="text-center">
-                <h3 className="text-xl font-black text-slate-900">No vehicles found</h3>
-                <p className="text-slate-500 font-medium max-w-xs mx-auto">Start by adding a new vehicle to your fleet above.</p>
+                <h3 className="text-xl font-black text-slate-900">ไม่พบรถยนต์</h3>
+                <p className="text-slate-500 font-medium max-w-xs mx-auto">เริ่มโดยการเพิ่มรถใหม่ในปุ่มด้านบน</p>
               </div>
             </div>
           )}
         </div>
       </div>
     </div>
-  );
-}
-
-function UsersIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-    </svg>
   );
 }

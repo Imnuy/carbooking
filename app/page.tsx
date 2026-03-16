@@ -9,6 +9,7 @@ import {
   MoreVertical
 } from 'lucide-react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export default async function DashboardPage() {
   const [carRows] = await pool.query<RowDataPacket[]>('SELECT COUNT(*) as count FROM cars');
@@ -23,21 +24,21 @@ export default async function DashboardPage() {
   );
 
   const stats = [
-    { label: 'Total Fleet', value: carRows[0].count, icon: Car, color: 'bg-indigo-600', trend: '+2 this month' },
-    { label: 'Active Users', value: userRows[0].count, icon: UsersIcon, color: 'bg-emerald-500', trend: '12 active today' },
-    { label: 'Pending Requests', value: bookingRows[0].count, icon: Clock, color: 'bg-amber-500', trend: 'Needs action' },
+    { label: 'ยานพาหนะทั้งหมด', value: carRows[0].count, icon: Car, color: 'bg-indigo-600', trend: '+2 เดือนนี้' },
+    { label: 'ผู้ใช้งานในระบบ', value: userRows[0].count, icon: UsersIcon, color: 'bg-emerald-500', trend: '12 ใช้งานวันนี้' },
+    { label: 'รายการรออนุมัติ', value: bookingRows[0].count, icon: Clock, color: 'bg-amber-500', trend: 'ต้องดำเนินการ' },
   ];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">System Overview</h1>
-          <p className="text-slate-500 font-medium">Monitoring your car booking operations</p>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight text-nowrap">ภาพรวมระบบ</h1>
+          <p className="text-slate-500 font-medium">ติดตามและจัดการการจองรถของหน่วยงาน</p>
         </div>
         <div className="flex space-x-3">
           <Link href="/bookings" className="bg-slate-900 border border-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-xl flex items-center hover:bg-slate-800 transition-all">
-            Manage Bookings
+            จัดการการจอง
             <ArrowRight className="ml-2 w-4 h-4" />
           </Link>
         </div>
@@ -70,23 +71,23 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
           <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
-            <h2 className="text-xl font-black text-slate-900">Recent Activity</h2>
-            <button className="text-indigo-600 text-sm font-bold hover:underline underline-offset-4">View All</button>
+            <h2 className="text-xl font-black text-slate-900">กิจกรรมล่าสุด</h2>
+            <button className="text-indigo-600 text-sm font-bold hover:underline underline-offset-4">ดูทั้งหมด</button>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead>
                 <tr className="bg-slate-50/50">
-                  <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Requester</th>
-                  <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Vehicle</th>
-                  <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Schedule</th>
-                  <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                  <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">ผู้ขอใช้รถ</th>
+                  <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">ยานพาหนะ</th>
+                  <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">กำหนดการ</th>
+                  <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">สถานะ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {recentBookings.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-8 py-12 text-center text-slate-400 font-medium">No recent bookings recorded</td>
+                    <td colSpan={4} className="px-8 py-12 text-center text-slate-400 font-medium">ไม่พบรายการล่าสุด</td>
                   </tr>
                 ) : (
                   recentBookings.map((b: any) => (
@@ -105,7 +106,7 @@ export default async function DashboardPage() {
                       </td>
                       <td className="px-8 py-5">
                         <div className="text-sm font-bold text-slate-800">{new Date(b.start_time).toLocaleDateString('th-TH')}</div>
-                        <div className="text-[11px] font-medium text-slate-500 italic">One-way trip</div>
+                        <div className="text-[11px] font-medium text-slate-500 italic text-nowrap">เดินทางเที่ยวเดียว</div>
                       </td>
                       <td className="px-8 py-5">
                         <span className={cn(
@@ -114,7 +115,9 @@ export default async function DashboardPage() {
                           b.status === 'approved' ? 'bg-emerald-100 text-emerald-600' : 
                           'bg-red-100 text-red-600'
                         )}>
-                          {b.status}
+                          {b.status === 'pending' ? 'รออนุมัติ' : 
+                           b.status === 'approved' ? 'อนุมัติแล้ว' : 
+                           b.status === 'completed' ? 'เสร็จสิ้น' : 'ยกเลิก'}
                         </span>
                       </td>
                     </tr>
@@ -128,23 +131,23 @@ export default async function DashboardPage() {
         <div className="space-y-8">
           <div className="bg-indigo-600 rounded-3xl p-8 text-white shadow-2xl shadow-indigo-900/40 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full translate-x-8 -translate-y-8"></div>
-            <h3 className="text-xl font-black mb-2">Quick Action</h3>
-            <p className="text-indigo-100 text-sm mb-6 font-medium leading-relaxed italic opacity-80">Check current fleet availability and scheduled maintenance.</p>
+            <h3 className="text-xl font-black mb-2">เมนูด่วน</h3>
+            <p className="text-indigo-100 text-sm mb-6 font-medium leading-relaxed italic opacity-80">ตรวจสอบสถานะรถว่างและความพร้อมของยานพาหนะ</p>
             <Link href="/cars" className="bg-white text-indigo-600 w-full py-4 rounded-2xl font-black text-sm flex items-center justify-center shadow-xl hover:scale-[1.02] transition-transform">
-              Explore Fleet
+              ดูรถทั้งหมด
             </Link>
           </div>
           
           <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center">
-              System Health
+              สถานะระบบ
               <span className="ml-2 w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
             </h3>
             <div className="space-y-6">
               <div className="space-y-2">
                 <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
-                  <span>DB Connection</span>
-                  <span className="text-emerald-500">Stable</span>
+                  <span>การเชื่อมต่อ DB</span>
+                  <span className="text-emerald-500">ปกติ</span>
                 </div>
                 <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                   <div className="h-full bg-emerald-500 w-full"></div>
@@ -152,7 +155,7 @@ export default async function DashboardPage() {
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
-                  <span>Storage</span>
+                  <span>พื้นที่จัดเก็บ</span>
                   <span className="text-slate-900">12% / 100GB</span>
                 </div>
                 <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -165,8 +168,4 @@ export default async function DashboardPage() {
       </div>
     </div>
   );
-}
-
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(' ');
 }
