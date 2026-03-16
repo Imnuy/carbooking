@@ -1,52 +1,135 @@
 import pool from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { 
+  Car, 
+  Plus, 
+  Search, 
+  Edit3, 
+  Trash2, 
+  Eye,
+  Settings2,
+  AlertCircle
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default async function CarsPage() {
   const [cars] = await pool.query<RowDataPacket[]>('SELECT * FROM cars ORDER BY id DESC');
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center border-b pb-4">
-        <h1 className="text-3xl font-bold text-slate-800">Manage Cars</h1>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow transition-colors">
-          Add New Car
+    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Vehicle Management</h1>
+          <p className="text-slate-500 font-medium">Add, edit, or remove vehicles from your corporate fleet</p>
+        </div>
+        <button className="bg-slate-900 text-white px-6 py-3.5 rounded-2xl font-bold shadow-2xl flex items-center hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 group">
+          <Plus className="mr-2 w-5 h-5 group-hover:rotate-90 transition-transform" />
+          Add Vehicle
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Brand / Model</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">License Plate</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Seats</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-slate-200">
-            {cars.map((car: any) => (
-              <tr key={car.id} className="hover:bg-slate-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{car.id}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{car.brand} {car.model}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{car.license_plate}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{car.seats}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                    ${car.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {car.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button className="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
-                  <button className="text-red-600 hover:text-red-900">Delete</button>
-                </td>
+      <div className="bg-white rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.03)] border border-slate-100 overflow-hidden">
+        <div className="p-8 border-b border-slate-50 bg-slate-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Search by license plate or model..." 
+              className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+            />
+          </div>
+          <div className="flex items-center space-x-2">
+            <button className="p-3 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
+              <Settings2 className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead>
+              <tr className="bg-slate-50/70">
+                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">Vehicle Info</th>
+                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">Specifications</th>
+                <th className="px-8 py-5 text-left text-[11px] font-black text-slate-400 uppercase tracking-widest italic">Availability</th>
+                <th className="px-8 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest italic">Quick Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {cars.map((car: any) => (
+                <tr key={car.id} className="hover:bg-slate-50/80 transition-all duration-300 group">
+                  <td className="px-8 py-6">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-slate-900/10 group-hover:scale-110 transition-transform">
+                        <Car className="w-7 h-7" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-black text-slate-900">{car.brand} {car.model}</div>
+                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">{car.license_plate}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6">
+                    <div className="space-y-1">
+                      <div className="flex items-center text-sm font-bold text-slate-700">
+                        <UsersIcon className="w-3.5 h-3.5 mr-2 text-slate-400" />
+                        {car.seats} Seats
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Premium Class</div>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6">
+                    <span className={cn(
+                      "inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm",
+                      car.status === 'available' 
+                        ? 'bg-emerald-50 text-emerald-600' 
+                        : 'bg-rose-50 text-rose-600'
+                    )}>
+                      <span className={cn(
+                        "w-1.5 h-1.5 rounded-full mr-2",
+                        car.status === 'available' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'
+                      )}></span>
+                      {car.status}
+                    </span>
+                  </td>
+                  <td className="px-8 py-6 text-right">
+                    <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-600 hover:text-indigo-600 hover:border-indigo-100 hover:shadow-lg transition-all shadow-sm">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-600 hover:text-amber-500 hover:border-amber-100 hover:shadow-lg transition-all shadow-sm">
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-600 hover:text-rose-500 hover:border-rose-100 hover:shadow-lg transition-all shadow-sm">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {cars.length === 0 && (
+            <div className="py-24 flex flex-col items-center justify-center space-y-4">
+              <div className="p-6 bg-slate-50 rounded-full">
+                <AlertCircle className="w-12 h-12 text-slate-300" />
+              </div>
+              <div className="text-center">
+                <h3 className="text-xl font-black text-slate-900">No vehicles found</h3>
+                <p className="text-slate-500 font-medium max-w-xs mx-auto">Start by adding a new vehicle to your fleet above.</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
+  );
+}
+
+function UsersIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+    </svg>
   );
 }

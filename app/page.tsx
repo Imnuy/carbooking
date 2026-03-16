@@ -1,5 +1,14 @@
 import pool from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { 
+  Car, 
+  Users as UsersIcon, 
+  Clock, 
+  TrendingUp, 
+  ArrowRight,
+  MoreVertical
+} from 'lucide-react';
+import Link from 'next/link';
 
 export default async function DashboardPage() {
   const [carRows] = await pool.query<RowDataPacket[]>('SELECT COUNT(*) as count FROM cars');
@@ -13,84 +22,151 @@ export default async function DashboardPage() {
      ORDER BY b.created_at DESC LIMIT 5`
   );
 
+  const stats = [
+    { label: 'Total Fleet', value: carRows[0].count, icon: Car, color: 'bg-indigo-600', trend: '+2 this month' },
+    { label: 'Active Users', value: userRows[0].count, icon: UsersIcon, color: 'bg-emerald-500', trend: '12 active today' },
+    { label: 'Pending Requests', value: bookingRows[0].count, icon: Clock, color: 'bg-amber-500', trend: 'Needs action' },
+  ];
+
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-slate-800 border-b pb-4">Dashboard</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center shadow-lg transition-transform hover:scale-105">
-          <div className="rounded-full bg-blue-100 p-4 text-blue-600 mr-4">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-          </div>
-          <div>
-            <div className="text-sm font-medium text-slate-500 uppercase tracking-wide">Total Cars</div>
-            <div className="text-3xl font-bold text-slate-800">{carRows[0].count}</div>
-          </div>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">System Overview</h1>
+          <p className="text-slate-500 font-medium">Monitoring your car booking operations</p>
         </div>
-        
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center shadow-lg transition-transform hover:scale-105">
-          <div className="rounded-full bg-emerald-100 p-4 text-emerald-600 mr-4">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-          </div>
-          <div>
-            <div className="text-sm font-medium text-slate-500 uppercase tracking-wide">Users</div>
-            <div className="text-3xl font-bold text-slate-800">{userRows[0].count}</div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex items-center shadow-lg transition-transform hover:scale-105">
-          <div className="rounded-full bg-amber-100 p-4 text-amber-600 mr-4">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-          </div>
-          <div>
-            <div className="text-sm font-medium text-slate-500 uppercase tracking-wide">Pending Bookings</div>
-            <div className="text-3xl font-bold text-slate-800">{bookingRows[0].count}</div>
-          </div>
+        <div className="flex space-x-3">
+          <Link href="/bookings" className="bg-slate-900 border border-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-xl flex items-center hover:bg-slate-800 transition-all">
+            Manage Bookings
+            <ArrowRight className="ml-2 w-4 h-4" />
+          </Link>
         </div>
       </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {stats.map((stat, i) => (
+          <div key={i} className="bg-white rounded-3xl p-8 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all group overflow-hidden relative">
+            <div className={`absolute top-0 right-0 w-32 h-32 ${stat.color} opacity-[0.03] rounded-bl-full translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform duration-500`}></div>
+            <div className="flex justify-between items-start mb-6">
+              <div className={`${stat.color} p-4 rounded-2xl shadow-lg shadow-current/20`}>
+                <stat.icon className="w-6 h-6 text-white" />
+              </div>
+              <div className="p-2 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer">
+                <MoreVertical className="w-5 h-5 text-slate-400" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-slate-400 text-sm font-bold uppercase tracking-wider">{stat.label}</div>
+              <div className="text-4xl font-black text-slate-900">{stat.value}</div>
+            </div>
+            <div className="mt-6 flex items-center text-xs font-bold text-emerald-500 bg-emerald-50 w-fit px-3 py-1 rounded-full">
+              <TrendingUp className="w-3 h-3 mr-1" />
+              {stat.trend}
+            </div>
+          </div>
+        ))}
+      </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-          <h2 className="font-semibold text-slate-800">Recent Bookings</h2>
-        </div>
-        <div className="p-0">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Car</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
-              {recentBookings.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-slate-500">No recent bookings found</td>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+          <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
+            <h2 className="text-xl font-black text-slate-900">Recent Activity</h2>
+            <button className="text-indigo-600 text-sm font-bold hover:underline underline-offset-4">View All</button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="bg-slate-50/50">
+                  <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Requester</th>
+                  <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Vehicle</th>
+                  <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Schedule</th>
+                  <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                 </tr>
-              ) : (
-                recentBookings.map((b: any) => (
-                  <tr key={b.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{b.fullname}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{b.brand} {b.model} ({b.license_plate})</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                      {new Date(b.start_time).toLocaleDateString()} - {new Date(b.end_time).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${b.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-                          b.status === 'approved' ? 'bg-green-100 text-green-800' : 
-                          'bg-red-100 text-red-800'}`}>
-                        {b.status}
-                      </span>
-                    </td>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {recentBookings.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-8 py-12 text-center text-slate-400 font-medium">No recent bookings recorded</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  recentBookings.map((b: any) => (
+                    <tr key={b.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-8 py-5">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
+                            {b.fullname.charAt(0)}
+                          </div>
+                          <span className="text-sm font-bold text-slate-900">{b.fullname}</span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="text-sm font-medium text-slate-700">{b.brand} {b.model}</div>
+                        <div className="text-[11px] font-bold text-slate-400 uppercase">{b.license_plate}</div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="text-sm font-bold text-slate-800">{new Date(b.start_time).toLocaleDateString('th-TH')}</div>
+                        <div className="text-[11px] font-medium text-slate-500 italic">One-way trip</div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className={cn(
+                          "px-3 py-1 text-[10px] font-black uppercase tracking-tight rounded-lg",
+                          b.status === 'pending' ? 'bg-amber-100 text-amber-600' : 
+                          b.status === 'approved' ? 'bg-emerald-100 text-emerald-600' : 
+                          'bg-red-100 text-red-600'
+                        )}>
+                          {b.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div className="space-y-8">
+          <div className="bg-indigo-600 rounded-3xl p-8 text-white shadow-2xl shadow-indigo-900/40 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full translate-x-8 -translate-y-8"></div>
+            <h3 className="text-xl font-black mb-2">Quick Action</h3>
+            <p className="text-indigo-100 text-sm mb-6 font-medium leading-relaxed italic opacity-80">Check current fleet availability and scheduled maintenance.</p>
+            <Link href="/cars" className="bg-white text-indigo-600 w-full py-4 rounded-2xl font-black text-sm flex items-center justify-center shadow-xl hover:scale-[1.02] transition-transform">
+              Explore Fleet
+            </Link>
+          </div>
+          
+          <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+            <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center">
+              System Health
+              <span className="ml-2 w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            </h3>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
+                  <span>DB Connection</span>
+                  <span className="text-emerald-500">Stable</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 w-full"></div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
+                  <span>Storage</span>
+                  <span className="text-slate-900">12% / 100GB</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-indigo-600 w-[12%]"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
+}
+
+function cn(...classes: any[]) {
+  return classes.filter(Boolean).join(' ');
 }
