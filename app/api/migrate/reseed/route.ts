@@ -18,7 +18,7 @@ export async function GET() {
       const carTypeId = await resolveCarTypeId({ car_type: car.car_type, model: car.model });
       await queryWithEncoding(
         `INSERT INTO cars (brand, model, license_plate, seats, car_type_id, car_type, is_active, created_by)
-         VALUES ($1, $2, $3, $4, $5, (SELECT car_type FROM car_type WHERE id = $5), $6, $7)`,
+         VALUES ($1, $2, $3, $4, $5, (SELECT name FROM car_type WHERE id = $5), $6, $7)`,
         [car.brand, car.model, car.license_plate, car.seats, carTypeId, true, 'admin']
       );
     }
