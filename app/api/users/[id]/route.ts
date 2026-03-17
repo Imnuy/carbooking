@@ -14,7 +14,7 @@ export async function GET(
     if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const [rows]: any = await pool.query(
-      'SELECT id, username, password, fullname, role, department FROM users WHERE id = ?',
+      'SELECT id, username, password, fullname, role, department, image_url FROM users WHERE id = ?',
       [id]
     );
 
@@ -40,11 +40,11 @@ export async function PUT(
     if (user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const data = await req.json();
-    const { username, password, fullname, role, department } = data;
+    const { username, password, fullname, role, department, image_url } = data;
 
     await pool.query(
-      'UPDATE users SET username = ?, password = ?, fullname = ?, role = ?, department = ? WHERE id = ?',
-      [username, password, fullname, role, department, id]
+      'UPDATE users SET username = ?, password = ?, fullname = ?, role = ?, department = ?, image_url = ? WHERE id = ?',
+      [username, password, fullname, role, department, image_url, id]
     );
 
     return NextResponse.json({ message: 'User updated successfully' });

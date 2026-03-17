@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Plus, 
@@ -15,12 +15,14 @@ import {
   Loader2,
   X,
   Save,
-  ShieldCheck
+  ShieldCheck,
+  Camera
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function UsersPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -32,7 +34,8 @@ export default function UsersPage() {
     username: '',
     password: '',
     role: 'user',
-    department: ''
+    department: '',
+    image_url: ''
   });
 
   const fetchUsers = async () => {
@@ -59,11 +62,12 @@ export default function UsersPage() {
     if (user) {
       setEditingUser(user);
       setFormData({
-        fullname: user.fullname,
-        username: user.username,
+        fullname: user.fullname || '',
+        username: user.username || '',
         password: user.password || '',
-        role: user.role,
-        department: user.department || ''
+        role: user.role || 'user',
+        department: user.department || '',
+        image_url: user.image_url || ''
       });
     } else {
       setEditingUser(null);
@@ -72,10 +76,26 @@ export default function UsersPage() {
         username: '',
         password: '',
         role: 'user',
-        department: ''
+        department: '',
+        image_url: ''
       });
     }
     setIsModalOpen(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('ขนาดไฟล์ต้องไม่เกิน 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, image_url: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -178,8 +198,12 @@ export default function UsersPage() {
                   <tr key={u.id} className="hover:bg-slate-50/50 transition-all duration-300 group">
                     <td className="px-10 py-8">
                       <div className="flex items-center space-x-6">
-                        <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-100 shadow-sm group-hover:scale-105 transition-transform text-slate-400">
-                          <User className="w-8 h-8" />
+                        <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-100 shadow-sm group-hover:scale-105 transition-transform text-slate-400 overflow-hidden">
+                          {u.image_url ? (
+                            <img src={u.image_url} alt={u.fullname} className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="w-8 h-8" />
+                          )}
                         </div>
                         <div>
                           <div className="text-xl font-black text-slate-900">{u.fullname}</div>
@@ -225,8 +249,8 @@ export default function UsersPage() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="bg-white rounded-[3rem] w-full max-w-xl shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-10 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+          <div className="bg-white rounded-[3rem] w-full max-w-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto no-scrollbar">
+            <div className="p-10 border-b border-slate-50 flex items-center justify-between bg-slate-50/30 sticky top-0 z-10 backdrop-blur-md">
               <div className="flex items-center space-x-4">
                 <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
                   <User className="text-white w-6 h-6" />
@@ -245,76 +269,122 @@ export default function UsersPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-10 space-y-8">
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">ชื่อ-นามสกุล</label>
+              <div className="flex flex-col md:flex-row gap-8">
+                {/* Image Upload */}
+                <div className="w-full md:w-1/3 flex flex-col items-center">
+                  <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-4">รูปโปรไฟล์</h3>
                   <input 
-                    required 
-                    type="text" 
-                    value={formData.fullname}
-                    onChange={(e) => setFormData({...formData, fullname: e.target.value})}
-                    className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700" 
-                    placeholder="ระบุชื่อจริงและนามสกุล..." 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleFileChange} 
+                    accept="image/*" 
+                    className="hidden" 
                   />
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">ชื่อเรียก/แผนก</label>
-                    <div className="relative">
-                      <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input 
-                        type="text" 
-                        value={formData.department}
-                        onChange={(e) => setFormData({...formData, department: e.target.value})}
-                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700" 
-                        placeholder="ระบุแผนก..." 
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">บทบาท</label>
-                    <div className="relative">
-                      <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <select 
-                        value={formData.role}
-                        onChange={(e) => setFormData({...formData, role: e.target.value})}
-                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 appearance-none shadow-sm"
-                      >
-                        <option value="user">User (ผู้ใช้ทั่วไป)</option>
-                        <option value="admin">Admin (ผู้ดูแลระบบ)</option>
-                      </select>
-                    </div>
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full aspect-square bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center hover:bg-slate-100/50 transition-all cursor-pointer group relative overflow-hidden shadow-inner"
+                  >
+                    {formData.image_url ? (
+                      <>
+                        <img src={formData.image_url} alt="Profile Preview" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Camera className="w-10 h-10 text-white" />
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFormData(prev => ({ ...prev, image_url: '' }));
+                          }}
+                          className="absolute top-4 right-4 p-2 bg-rose-500 text-white rounded-xl shadow-lg hover:scale-110 transition-transform"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <User className="w-12 h-12 text-slate-200 mb-2 group-hover:scale-110 transition-transform" />
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">อัปโหลดรูป</p>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-50">
+                {/* Info Fields */}
+                <div className="flex-1 space-y-6">
                   <div className="space-y-2">
-                    <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">ชื่อผู้ใช้ (Username)</label>
+                    <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">ชื่อ-นามสกุล</label>
                     <input 
                       required 
                       type="text" 
-                      value={formData.username}
-                      onChange={(e) => setFormData({...formData, username: e.target.value})}
+                      value={formData.fullname}
+                      onChange={(e) => setFormData({...formData, fullname: e.target.value})}
                       className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700" 
-                      placeholder="เช่น admin, user01..." 
+                      placeholder="ระบุชื่อจริงและนามสกุล..." 
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">รหัสผ่าน (Password)</label>
+
+                  <div className="grid grid-cols-1 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">ชื่อเรียก/แผนก</label>
+                      <div className="relative">
+                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input 
+                          type="text" 
+                          value={formData.department}
+                          onChange={(e) => setFormData({...formData, department: e.target.value})}
+                          className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700" 
+                          placeholder="ระบุแผนก..." 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-8 border-t border-slate-50">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">บทบาท</label>
+                  <div className="relative">
+                    <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <select 
+                      value={formData.role}
+                      onChange={(e) => setFormData({...formData, role: e.target.value})}
+                      className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 appearance-none"
+                    >
+                      <option value="user">User (ผู้ใช้ทั่วไป)</option>
+                      <option value="admin">Admin (ผู้ดูแลระบบ)</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">ชื่อผู้ใช้ (Username)</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={formData.username}
+                    onChange={(e) => setFormData({...formData, username: e.target.value})}
+                    className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700" 
+                    placeholder="เช่น admin, user01..." 
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">รหัสผ่าน (Password)</label>
+                  <div className="relative">
+                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input 
                       required 
                       type="password" 
                       value={formData.password}
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
-                      className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700" 
+                      className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700" 
                       placeholder="ระบุรหัสผ่าน..." 
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end space-x-4 pt-6 border-t border-slate-50">
+              <div className="flex items-center justify-end space-x-4 pt-10 border-t border-slate-50 sticky bottom-0 bg-white pb-2 mt-4">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
