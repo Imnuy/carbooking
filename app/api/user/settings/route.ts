@@ -25,6 +25,7 @@ export async function GET() {
         line_notification: false,
         line_token: '',
         telegram_notification: false,
+        telegram_bot_token: '',
         telegram_chat_id: ''
       });
     }
@@ -48,17 +49,18 @@ export async function PUT(req: NextRequest) {
     }
     const data = await req.json();
 
-    const { line_notification, line_token, telegram_notification, telegram_chat_id } = data;
+    const { line_notification, line_token, telegram_notification, telegram_bot_token, telegram_chat_id } = data;
 
     await pool.query(
-      `INSERT INTO user_settings (user_id, line_notification, line_token, telegram_notification, telegram_chat_id)
-       VALUES (?, ?, ?, ?, ?)
+      `INSERT INTO user_settings (user_id, line_notification, line_token, telegram_notification, telegram_bot_token, telegram_chat_id)
+       VALUES (?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE 
        line_notification = VALUES(line_notification),
        line_token = VALUES(line_token),
        telegram_notification = VALUES(telegram_notification),
+       telegram_bot_token = VALUES(telegram_bot_token),
        telegram_chat_id = VALUES(telegram_chat_id)`,
-      [user.id, line_notification, line_token, telegram_notification, telegram_chat_id]
+      [user.id, line_notification, line_token, telegram_notification, telegram_bot_token, telegram_chat_id]
     );
 
     return NextResponse.json({ message: 'Settings updated successfully' });

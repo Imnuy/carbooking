@@ -10,7 +10,7 @@ export default function AddBookingPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [cars, setCars] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   
   const [formData, setFormData] = useState({
     user_id: '',
@@ -22,12 +22,20 @@ export default function AddBookingPage() {
   });
 
   useEffect(() => {
-    const fetchData = async () => {
+    const checkAuthAndFetch = async () => {
       try {
+        // 1. Check Authentication
+        const authRes = await fetch('/api/auth');
+        if (!authRes.ok) {
+          router.push('/login');
+          return;
+        }
+        const authData = await authRes.json();
+        const currentUser = authData.user;
+
+        // 2. Fetch Data
         const [carsRes, usersRes] = await Promise.all([
           fetch('/api/cars'),
-          // Assuming we might have a users API or we just fetch from DB indirectly
-          // For now, let's try to fetch cars and if no users API, we'll use a placeholder or check if it exists
           fetch('/api/users').catch(() => null)
         ]);
 
@@ -36,22 +44,16 @@ export default function AddBookingPage() {
           setCars(carsData.filter((c: any) => c.status === 'available'));
         }
 
-        if (usersRes && usersRes.ok) {
-          const usersData = await usersRes.json();
-          setUsers(usersData);
-        } else {
-          // Fallback if no users API yet - for demo purposes we might need current user
-          setUsers([{ id: 1, fullname: 'Admin User' }]);
-          setFormData(prev => ({ ...prev, user_id: '1' }));
-        }
+        setCurrentUser(currentUser);
+        setFormData(prev => ({ ...prev, user_id: currentUser.id.toString() }));
       } catch (error) {
         console.error('Fetch error:', error);
       } finally {
         setFetching(false);
       }
     };
-    fetchData();
-  }, []);
+    checkAuthAndFetch();
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,18 +118,10 @@ export default function AddBookingPage() {
             <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center">
               <User className="w-3 h-3 mr-1" /> ผู้ขอใช้งาน
             </label>
-            <select 
-              required
-              name="user_id"
-              value={formData.user_id}
-              onChange={handleChange}
-              className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 appearance-none shadow-inner"
-            >
-              <option value="">เลือกผู้ใช้งาน</option>
-              {users.map(u => (
-                <option key={u.id} value={u.id}>{u.fullname}</option>
-              ))}
-            </select>
+            <div className="w-full px-6 py-4 bg-slate-100 border border-slate-200 rounded-2xl font-black text-slate-500 shadow-inner">
+              {currentUser?.fullname || 'กำลังโหลด...'}
+            </div>
+            <input type="hidden" name="user_id" value={formData.user_id} />
           </div>
 
           {/* Car Selection */}

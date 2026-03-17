@@ -21,6 +21,7 @@ export default function SettingsPage() {
     line_notification: false,
     line_token: '',
     telegram_notification: false,
+    telegram_bot_token: '',
     telegram_chat_id: ''
   });
 
@@ -50,6 +51,7 @@ export default function SettingsPage() {
             line_notification: !!data.line_notification,
             line_token: data.line_token || '',
             telegram_notification: !!data.telegram_notification,
+            telegram_bot_token: data.telegram_bot_token || '',
             telegram_chat_id: data.telegram_chat_id || ''
           });
         }
@@ -189,6 +191,16 @@ export default function SettingsPage() {
             </div>
 
             <div className={cn("space-y-4 transition-all duration-300", settings.telegram_notification ? "opacity-100" : "opacity-30 pointer-events-none grayscale")}>
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">Telegram Bot Token</label>
+                <input 
+                  type="password"
+                  placeholder="กรอก Bot Token จาก BotFather"
+                  value={settings.telegram_bot_token}
+                  onChange={(e) => setSettings({...settings, telegram_bot_token: e.target.value})}
+                  className="w-full px-6 py-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm focus:ring-2 focus:ring-sky-500 transition-all shadow-inner"
+                />
+              </div>
               <div className="space-y-2">
                 <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">Telegram Chat ID</label>
                 <input 

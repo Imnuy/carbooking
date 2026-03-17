@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { cookies } from 'next/headers';
+import { sendNotification } from '@/lib/notifications';
 
 export async function GET(
   req: NextRequest,
@@ -58,6 +59,31 @@ export async function PUT(
 
     // If approved, you might want to update driver/car status, but for now we keep it simple
     
+    // Notify User
+    try {
+      const [bookingRows]: any = await pool.query(
+        `SELECT b.*, c.brand, c.model, c.license_plate, d.fullname as driver_name 
+         FROM bookings b 
+         JOIN cars c ON b.car_id = c.id 
+         LEFT JOIN drivers d ON b.driver_id = d.id
+         WHERE b.id = ?`,
+        [id]
+      );
+      
+      if (bookingRows.length > 0) {
+        const b = bookingRows[0];
+        const statusText = status === 'approved' ? '✅ อนุมัติแล้ว' : status === 'rejected' ? '❌ ถูกปฏิเสธ' : status;
+        const carInfo = `${b.brand} ${b.model} (${b.license_plate})`;
+        const driverInfo = b.driver_name ? `\n👨‍✈️ พนักงานขับรถ: ${b.driver_name}` : '';
+        
+        const message = `📢 <b>แจ้งเตือนสถานะการจองรถ</b>\n\nสถานะ: ${statusText}\nID: #${id}\n🚘 รถ: ${carInfo}${driverInfo}\n📍 จุดหมาย: ${b.destination}\n📅 เริ่ม: ${new Date(b.start_time).toLocaleString('th-TH')}`;
+        
+        await sendNotification(message, b.user_id);
+      }
+    } catch (notifyErr) {
+      console.error('Notification failed:', notifyErr);
+    }
+
     return NextResponse.json({ message: 'Booking updated successfully' });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

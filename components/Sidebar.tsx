@@ -70,7 +70,10 @@ export default function Sidebar() {
       icon: Key, 
       badge: pendingCount && pendingCount > 0 ? pendingCount : undefined 
     },
-    ...(isAdmin ? [{ name: 'ตั้งค่าการแจ้งเตือน', href: '/settings', icon: Bell }] : []),
+    ...(isAdmin ? [
+      { name: 'ตั้งค่าการแจ้งเตือน', href: '/settings', icon: Bell },
+      { name: 'จัดการผู้ใช้งาน', href: '/users', icon: UserIcon }
+    ] : []),
   ];
 
   const supportItems = [
