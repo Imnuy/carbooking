@@ -61,9 +61,9 @@ export default function CarsManagementClient({ cars }: { cars: CarRow[] }) {
           <table className="min-w-full">
             <thead>
               <tr className="bg-[#f7fbf7]">
+                <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest italic">หมายเลขรถ</th>
                 <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest italic">ข้อมูลรถ</th>
                 <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest italic"><span className="inline-flex items-center gap-2"><Tag className="w-3.5 h-3.5" />เลขทะเบียน</span></th>
-                <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest italic">หมายเลขรถ</th>
                 <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest italic">ประเภทรถ</th>
                 <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest italic"><span className="inline-flex items-center gap-2"><CircleCheckBig className="w-3.5 h-3.5" />สถานะ</span></th>
                 <th className="px-8 py-4 text-right text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest italic">ดำเนินการ</th>
@@ -72,6 +72,15 @@ export default function CarsManagementClient({ cars }: { cars: CarRow[] }) {
             <tbody className="divide-y divide-[#edf5ef]">
               {cars.map((car) => (
                 <tr key={car.id} className="hover:bg-[#f6fbf7] transition-all duration-300 group">
+                  <td className="px-8 py-6">
+                    {car.car_number ? (
+                      <span className="inline-flex items-center rounded-lg border border-[#e0ecf4] bg-[#f6faff] px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-[#2b4d66]">
+                        {car.car_number}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-300">ไม่ระบุ</span>
+                    )}
+                  </td>
                   <td className="px-8 py-6">
                     <div className="flex items-center space-x-4">
                       <div className="w-12 h-12 bg-[#ecf8ef] rounded-full flex items-center justify-center text-[#23a154] border border-[#d7efdb]">
@@ -88,15 +97,6 @@ export default function CarsManagementClient({ cars }: { cars: CarRow[] }) {
                   </td>
                   <td className="px-8 py-6">
                     <div className="text-sm font-black text-[#2f6b43] bg-[#f4fbf5] px-3 py-1.5 rounded-lg inline-block border border-[#d7efdb]">{car.license_plate}</div>
-                  </td>
-                  <td className="px-8 py-6">
-                    {car.car_number ? (
-                      <span className="inline-flex items-center rounded-lg border border-[#e0ecf4] bg-[#f6faff] px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-[#2b4d66]">
-                        {car.car_number}
-                      </span>
-                    ) : (
-                      <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-300">ไม่ระบุ</span>
-                    )}
                   </td>
                   <td className="px-8 py-6">
                     <span className={cn('inline-flex items-center px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest shadow-sm', car.car_type === 'รถตู้นั่งบรรทุก' ? 'bg-lime-100 text-lime-800' : car.car_type === 'รถยนต์บรรทุก' ? 'bg-amber-50 text-amber-600' : car.car_type === 'รถยนต์นั่งบรรทุก4ประตู' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600')}>
