@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   Plus, 
-  ArrowLeft, 
   Calendar, 
   Loader2, 
   Users, 
@@ -49,18 +48,14 @@ export default function AddBookingPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
-    // Store as an array of empty objects to maintain compatibility with existing display logic
-    // Or store as {"count": N}
-    const passengersData = JSON.stringify(new Array(passengerCount).fill({}));
-    
+
     try {
       const response = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          passengers: passengersData
+          passengers: passengerCount
         })
       });
 
@@ -80,18 +75,6 @@ export default function AddBookingPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3 md:space-x-4">
-          <Link href="/bookings" className="p-2 md:p-3 bg-white border border-slate-100 rounded-xl md:rounded-2xl text-slate-400 hover:text-slate-900 shadow-sm transition-all hover:scale-105">
-            <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
-          </Link>
-          <div>
-            <h1 className="text-2xl md:text-4xl font-bold text-slate-900 tracking-tight">สร้างใบขอใช้รถใหม่</h1>
-            <p className="text-xs md:text-sm text-slate-500 font-medium italic">ระบุรายละเอียดการขอใช้งานและจำนวนผู้โดยสาร</p>
-          </div>
-        </div>
-      </div>
-
       <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
         {/* Section 1: Requester & Supervisor */}
         <div className="bg-white rounded-3xl md:rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-10">

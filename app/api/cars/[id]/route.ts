@@ -1,17 +1,38 @@
 import { NextResponse } from 'next/server';
-import pool, { queryWithEncoding } from '@/lib/db';
+import { queryWithEncoding } from '@/lib/db';
+
+let carSchemaReady = false;
+
+async function ensureCarNumberColumn() {
+  if (carSchemaReady) {
+    return;
+  }
+
+  await queryWithEncoding('ALTER TABLE cars ADD COLUMN IF NOT EXISTS car_number VARCHAR(50)');
+  carSchemaReady = true;
+}
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { brand, model, license_plate, seats, car_type, is_active } = await request.json();
-    const id = params.id;
+    await ensureCarNumberColumn();
+    const { brand, model, license_plate, seats, car_type, car_number, is_active } = await request.json();
+    const { id } = await params;
 
     await queryWithEncoding(
-      'UPDATE cars SET brand = $1, model = $2, license_plate = $3, seats = $4, car_type = $5, is_active = $6 WHERE id = $7',
-      [brand, model, license_plate, seats, car_type, is_active !== undefined ? is_active : true, id]
+      'UPDATE cars SET brand = $1, model = $2, license_plate = $3, seats = $4, car_type = $5, car_number = $6, is_active = $7 WHERE id = $8',
+      [
+        brand,
+        model,
+        license_plate,
+        seats,
+        car_type,
+        car_number || null,
+        is_active !== undefined ? is_active : true,
+        id,
+      ]
     );
 
     return NextResponse.json({ message: 'Car updated successfully' });
@@ -23,10 +44,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
+    const { id } = await params;
     await queryWithEncoding('DELETE FROM cars WHERE id = $1', [id]);
     return NextResponse.json({ message: 'Car deleted successfully' });
   } catch (error) {

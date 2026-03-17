@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import { queryWithEncoding } from '@/lib/db';
 
 export async function POST() {
   try {
-    await pool.query(
-      "ALTER TABLE bookings ADD COLUMN fuel_reimbursement VARCHAR(100) AFTER purpose"
+    await queryWithEncoding(
+      'ALTER TABLE bookings ADD COLUMN IF NOT EXISTS fuel_reimbursement VARCHAR(100)'
     );
-    return NextResponse.json({ message: 'Column fuel_reimbursement added successfully' });
-  } catch (error: any) {
-    if (error.code === 'ER_DUP_FIELDNAME') {
-      return NextResponse.json({ message: 'Column already exists' });
-    }
+
+    return NextResponse.json({ message: 'fuel_reimbursement column checked successfully' });
+  } catch (error) {
     console.error('Error adding column:', error);
     return NextResponse.json({ error: 'Failed to add column' }, { status: 500 });
   }

@@ -1,13 +1,26 @@
 import { NextResponse } from 'next/server';
-import pool, { queryWithEncoding } from '@/lib/db';
+import { queryWithEncoding } from '@/lib/db';
+
+let carSchemaReady = false;
+
+async function ensureCarNumberColumn() {
+  if (carSchemaReady) {
+    return;
+  }
+
+  await queryWithEncoding('ALTER TABLE cars ADD COLUMN IF NOT EXISTS car_number VARCHAR(50)');
+  carSchemaReady = true;
+}
 
 export async function POST(request: Request) {
   try {
-    const { brand, model, license_plate, seats, car_type } = await request.json();
+    await ensureCarNumberColumn();
+    const { brand, model, license_plate, seats, car_type, car_number, is_active } = await request.json();
 
     await queryWithEncoding(
-      'INSERT INTO cars (brand, model, license_plate, seats, car_type, created_by) VALUES (?, ?, ?, ?, ?, ?)',
-      [brand, model, license_plate, seats, car_type, 'admin']
+      `INSERT INTO cars (brand, model, license_plate, seats, car_type, car_number, is_active, created_by, updated_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [brand, model, license_plate, seats, car_type, car_number || null, is_active ?? true, 'admin', 'admin']
     );
 
     return NextResponse.json({ message: 'Car added successfully' });
@@ -19,6 +32,7 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
+    await ensureCarNumberColumn();
     const rows = await queryWithEncoding('SELECT * FROM cars ORDER BY id DESC');
     return NextResponse.json(rows);
   } catch (error) {

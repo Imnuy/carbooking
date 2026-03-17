@@ -13,7 +13,7 @@ const pool = new Pool({
 });
 
 // Helper function to execute queries with proper error handling
-export async function queryWithEncoding(text: string, params?: any[]) {
+export async function queryWithEncoding(text: string, params?: unknown[]) {
   const start = Date.now();
   try {
     const res = await pool.query(text, params);

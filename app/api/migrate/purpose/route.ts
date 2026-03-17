@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import { queryWithEncoding } from '@/lib/db';
 
 export async function POST() {
   try {
-    await pool.query(
-      "ALTER TABLE bookings ADD COLUMN purpose TEXT AFTER destination"
+    await queryWithEncoding(
+      'ALTER TABLE bookings ADD COLUMN IF NOT EXISTS purpose TEXT'
     );
-    return NextResponse.json({ message: 'Column objective/purpose added successfully' });
-  } catch (error: any) {
-    if (error.code === 'ER_DUP_FIELDNAME') {
-      return NextResponse.json({ message: 'Column already exists' });
-    }
+
+    return NextResponse.json({ message: 'purpose column checked successfully' });
+  } catch (error) {
     console.error('Error adding column:', error);
     return NextResponse.json({ error: 'Failed to add column' }, { status: 500 });
   }

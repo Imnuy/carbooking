@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Car, Save, Loader2, AlertTriangle } from 'lucide-react';
+import { X, Car, Save, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface EditCarModalProps {
@@ -10,8 +10,8 @@ interface EditCarModalProps {
     brand: string;
     model: string;
     license_plate: string;
-    seats: number;
-    car_type: string;
+    seats?: number | null;
+    car_type?: string | null;
     is_active: boolean;
   };
   isOpen: boolean;
@@ -25,7 +25,7 @@ export default function EditCarModal({ car, isOpen, onClose }: EditCarModalProps
     brand: car.brand,
     model: car.model,
     license_plate: car.license_plate,
-    seats: car.seats,
+    seats: car.seats ?? 0,
     car_type: car.car_type || 'รถตู้นั่งบรรทุก',
     is_active: car.is_active
   });
@@ -35,7 +35,7 @@ export default function EditCarModal({ car, isOpen, onClose }: EditCarModalProps
       brand: car.brand,
       model: car.model,
       license_plate: car.license_plate,
-      seats: car.seats,
+      seats: car.seats ?? 0,
       car_type: car.car_type || 'รถตู้นั่งบรรทุก',
       is_active: car.is_active
     });

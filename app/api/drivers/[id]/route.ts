@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
-import pool, { queryWithEncoding } from '@/lib/db';
+import { queryWithEncoding } from '@/lib/db';
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { fullname, is_active, note } = await request.json();
-    const id = params.id;
+    const { fullname, is_active, note, driver_type_code } = await request.json();
+    const { id } = await params;
 
     await queryWithEncoding(
-      'UPDATE drivers SET fullname = $1, is_active = $2, note = $3, updated_by = $4 WHERE id = $5',
-      [fullname, is_active, note, 'admin', id]
+      'UPDATE drivers SET fullname = $1, driver_type_code = $2, is_active = $3, note = $4, updated_by = $5 WHERE id = $6',
+      [fullname, driver_type_code || '01', is_active, note, 'admin', id]
     );
 
     return NextResponse.json({ message: 'Driver updated successfully' });
@@ -23,10 +23,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
+    const { id } = await params;
     await queryWithEncoding('DELETE FROM drivers WHERE id = $1', [id]);
     return NextResponse.json({ message: 'Driver deleted successfully' });
   } catch (error) {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Plus, ArrowLeft, Car, Loader2, Check } from 'lucide-react';
+import { Plus, Car, Loader2, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function AddCarPage() {
@@ -12,6 +12,7 @@ export default function AddCarPage() {
     brand: '',
     model: '',
     license_plate: '',
+    car_number: '',
     seats: '',
     car_type: 'รถตู้นั่งบรรทุก',
     is_active: true
@@ -44,18 +45,6 @@ export default function AddCarPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link href="/cars" className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-slate-900 shadow-sm transition-all hover:scale-105">
-            <ArrowLeft className="w-6 h-6" />
-          </Link>
-          <div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight">เพิ่มรถยนต์คันใหม่</h1>
-            <p className="text-slate-500 font-medium italic">ลงทะเบียนยานพาหนะใหม่เข้าสู่ระบบ</p>
-          </div>
-        </div>
-      </div>
-
       <form onSubmit={handleSubmit} className="bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100 p-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
@@ -89,6 +78,16 @@ export default function AddCarPage() {
               onChange={(e) => setFormData({...formData, license_plate: e.target.value})}
               className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 transition-all font-bold text-slate-700 placeholder:text-slate-300" 
               placeholder="เช่น กข 1234..." 
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">หมายเลขรถ</label>
+            <input 
+              type="text" 
+              value={formData.car_number}
+              onChange={(e) => setFormData({...formData, car_number: e.target.value})}
+              className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-slate-900 transition-all font-bold text-slate-700 placeholder:text-slate-300" 
+              placeholder="เช่น CAR-01" 
             />
           </div>
           <div className="space-y-2">
