@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryWithEncoding } from '@/lib/db';
-import { ensureCarTypeSchema, resolveCarTypeId } from '@/lib/car-type';
+import { ensureCarTypeSchema, resolveCarTypeId, getCarTypes } from '@/lib/car-type';
 
 export async function POST(request: Request) {
   try {
@@ -10,6 +10,9 @@ export async function POST(request: Request) {
       car_type_id: typeof car_type_id === 'number' ? car_type_id : Number(car_type_id),
       car_type,
     });
+
+    const carTypes = await getCarTypes();
+    const resolvedCarTypeName = carTypes.find((ct: any) => ct.id === resolvedCarTypeId)?.name || car_type;
 
     await queryWithEncoding(
       `SELECT setval(
@@ -21,8 +24,8 @@ export async function POST(request: Request) {
 
     await queryWithEncoding(
       `INSERT INTO cars (brand, model, license_plate, seats, car_type_id, car_type, car_number, is_active, created_by, updated_by)
-       VALUES ($1, $2, $3, $4, $5, (SELECT name FROM car_type WHERE id = $5), $6, $7, $8, $9)`,
-      [brand, model, license_plate, seats, resolvedCarTypeId, car_number || null, is_active ?? true, 'admin', 'admin']
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [brand, model, license_plate, seats, resolvedCarTypeId, resolvedCarTypeName, car_number || null, is_active ?? true, 'admin', 'admin']
     );
 
     return NextResponse.json({ message: 'Car added successfully' });
