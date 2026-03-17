@@ -15,7 +15,7 @@ export async function GET() {
     await queryWithEncoding('TRUNCATE TABLE cars RESTART IDENTITY CASCADE');
 
     for (const car of cars) {
-      const carTypeId = await resolveCarTypeId({ car_type: car.car_type, model: car.model });
+      const carTypeId = await resolveCarTypeId({ car_type: car.car_type });
       await queryWithEncoding(
         `INSERT INTO cars (brand, model, license_plate, seats, car_type_id, car_type, is_active, created_by)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
