@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Plus, 
@@ -16,9 +16,13 @@ import {
   X,
   Save,
   ShieldCheck,
-  Camera
+  Camera,
+  Check,
+  Maximize2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Cropper from 'react-easy-crop';
+import { getCroppedImg } from '@/lib/imageUtils';
 
 export default function UsersPage() {
   const router = useRouter();
@@ -29,6 +33,14 @@ export default function UsersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Image Cropper States
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [isCropping, setIsCropping] = useState(false);
+
   const [formData, setFormData] = useState({
     fullname: '',
     username: '',
@@ -59,6 +71,8 @@ export default function UsersPage() {
   }, [router]);
 
   const handleOpenModal = (user: any = null) => {
+    setIsCropping(false);
+    setImageSrc(null);
     if (user) {
       setEditingUser(user);
       setFormData({
@@ -83,6 +97,10 @@ export default function UsersPage() {
     setIsModalOpen(true);
   };
 
+  const onCropComplete = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -92,14 +110,30 @@ export default function UsersPage() {
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, image_url: reader.result as string }));
+        setImageSrc(reader.result as string);
+        setIsCropping(true);
       };
       reader.readAsDataURL(file);
     }
   };
 
+  const handleConfirmCrop = async () => {
+    if (imageSrc && croppedAreaPixels) {
+      try {
+        const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
+        setFormData(prev => ({ ...prev, image_url: croppedImage }));
+        setIsCropping(false);
+        setImageSrc(null);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCropping) return;
+    
     setSubmitting(true);
     try {
       const url = editingUser ? `/api/users/${editingUser.id}` : '/api/users';
@@ -270,44 +304,97 @@ export default function UsersPage() {
 
             <form onSubmit={handleSubmit} className="p-10 space-y-8">
               <div className="flex flex-col md:flex-row gap-8">
-                {/* Image Upload */}
+                {/* Image Upload & Resize */}
                 <div className="w-full md:w-1/3 flex flex-col items-center">
                   <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-4">รูปโปรไฟล์</h3>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleFileChange} 
-                    accept="image/*" 
-                    className="hidden" 
-                  />
-                  <div 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full aspect-square bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center hover:bg-slate-100/50 transition-all cursor-pointer group relative overflow-hidden shadow-inner"
-                  >
-                    {formData.image_url ? (
-                      <>
-                        <img src={formData.image_url} alt="Profile Preview" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Camera className="w-10 h-10 text-white" />
+                  
+                  {isCropping ? (
+                    <div className="w-full space-y-4">
+                      <div className="relative w-full aspect-square bg-slate-900 rounded-[2rem] overflow-hidden shadow-2xl">
+                        <Cropper
+                          image={imageSrc!}
+                          crop={crop}
+                          zoom={zoom}
+                          aspect={1}
+                          onCropChange={setCrop}
+                          onCropComplete={onCropComplete}
+                          onZoomChange={setZoom}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          <span>ย่อ/ขยาย</span>
+                          <span>{zoom.toFixed(1)}x</span>
                         </div>
+                        <input
+                          type="range"
+                          value={zoom}
+                          min={1}
+                          max={3}
+                          step={0.1}
+                          onChange={(e) => setZoom(Number(e.target.value))}
+                          className="w-full accent-indigo-600 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                        />
+                      </div>
+                      <div className="flex gap-2">
                         <button 
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setFormData(prev => ({ ...prev, image_url: '' }));
-                          }}
-                          className="absolute top-4 right-4 p-2 bg-rose-500 text-white rounded-xl shadow-lg hover:scale-110 transition-transform"
+                          onClick={() => setIsCropping(false)}
+                          className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 rounded-xl hover:bg-slate-100 transition-all"
                         >
-                          <X className="w-4 h-4" />
+                          ยกเลิก
                         </button>
-                      </>
-                    ) : (
-                      <>
-                        <User className="w-12 h-12 text-slate-200 mb-2 group-hover:scale-110 transition-transform" />
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">อัปโหลดรูป</p>
-                      </>
-                    )}
-                  </div>
+                        <button 
+                          type="button"
+                          onClick={handleConfirmCrop}
+                          className="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center justify-center"
+                        >
+                          <Check className="w-3 h-3 mr-2" /> ยืนยัน
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleFileChange} 
+                        accept="image/*" 
+                        className="hidden" 
+                      />
+                      <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full aspect-square bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center hover:bg-slate-100/50 transition-all cursor-pointer group relative overflow-hidden shadow-inner"
+                      >
+                        {formData.image_url ? (
+                          <>
+                            <img src={formData.image_url} alt="Profile Preview" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Camera className="w-10 h-10 text-white" />
+                            </div>
+                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                               <button 
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFormData(prev => ({ ...prev, image_url: '' }));
+                                }}
+                                className="p-2 bg-rose-500 text-white rounded-xl shadow-lg hover:scale-110 transition-transform"
+                                title="ลบรูป"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <User className="w-12 h-12 text-slate-200 mb-2 group-hover:scale-110 transition-transform" />
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">อัปโหลดรูป</p>
+                          </>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Info Fields */}
@@ -393,7 +480,7 @@ export default function UsersPage() {
                   ยกเลิก
                 </button>
                 <button 
-                  disabled={submitting}
+                  disabled={submitting || isCropping}
                   type="submit" 
                   className="bg-[#5550e6] text-white px-10 py-5 rounded-3xl font-black text-sm shadow-2xl shadow-indigo-900/20 hover:scale-105 active:scale-95 transition-all flex items-center group disabled:opacity-50"
                 >
