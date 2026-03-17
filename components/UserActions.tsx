@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Edit3, Trash2, Loader2 } from 'lucide-react';
+import { Edit3, Loader2, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import UserFormModal from '@/components/UserFormModal';
 import { confirmDelete, showError, showSuccess } from '@/lib/swal';
@@ -12,7 +12,7 @@ interface UserActionsProps {
     fullname?: string | null;
     username: string;
     department?: string | null;
-    role?: 'admin' | 'user';
+    role_id: number;
   };
 }
 
@@ -23,17 +23,11 @@ export default function UserActions({ user }: UserActionsProps) {
 
   const handleDelete = async () => {
     const confirmed = await confirmDelete('ยืนยันการลบผู้ใช้', user.fullname || user.username);
-
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/users/${user.id}`, {
-        method: 'DELETE',
-      });
-
+      const response = await fetch(`/api/users/${user.id}`, { method: 'DELETE' });
       if (response.ok) {
         await showSuccess('ลบข้อมูลผู้ใช้เรียบร้อยแล้ว');
         router.refresh();
@@ -51,20 +45,11 @@ export default function UserActions({ user }: UserActionsProps) {
 
   return (
     <div className="flex items-center justify-end space-x-2">
-      <button
-        onClick={() => setIsEditOpen(true)}
-        className="p-2.5 text-slate-400 hover:text-emerald-600 transition-colors"
-        title="แก้ไขผู้ใช้"
-      >
-        <Edit3 className="w-4 h-4" />
+      <button onClick={() => setIsEditOpen(true)} className="p-2.5 text-slate-400 transition-colors hover:text-emerald-600" title="แก้ไขผู้ใช้">
+        <Edit3 className="h-4 w-4" />
       </button>
-      <button
-        onClick={handleDelete}
-        disabled={isDeleting}
-        className="p-2.5 text-slate-400 hover:text-rose-600 transition-colors disabled:opacity-50"
-        title="ลบผู้ใช้"
-      >
-        {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+      <button onClick={handleDelete} disabled={isDeleting} className="p-2.5 text-slate-400 transition-colors hover:text-rose-600 disabled:opacity-50" title="ลบผู้ใช้">
+        {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
       </button>
       <UserFormModal
         isOpen={isEditOpen}
@@ -74,7 +59,7 @@ export default function UserActions({ user }: UserActionsProps) {
           fullname: user.fullname || '',
           username: user.username,
           department: user.department || '',
-          role: user.role || 'user',
+          role_id: user.role_id,
         }}
       />
     </div>

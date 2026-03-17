@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { AlertCircle, Car, CircleCheckBig, Plus, Search, Settings2, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import CarActions from '@/components/CarActions';
@@ -19,25 +19,28 @@ interface CarRow {
   is_active: boolean;
 }
 
+const noopSubscribe = () => () => {};
+
 export default function CarsManagementClient({ cars }: { cars: CarRow[] }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const isMounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
 
   const createButtonDesktop = (
-    <button onClick={() => setIsCreateOpen(true)} className="inline-flex items-center rounded-xl px-4 py-2 text-sm font-bold shadow-sm transition-all bg-[#23b35b] text-white hover:bg-[#1ea651]">
+    <button onClick={() => setIsCreateOpen(true)} className="inline-flex items-center rounded-xl px-3 py-1.5 text-sm font-bold shadow-sm transition-all bg-[#23b35b] text-white hover:bg-[#1ea651]">
       <Plus className="mr-2 h-4 w-4" />
       เพิ่มรถใหม่
     </button>
   );
 
   const createButtonMobile = (
-    <button onClick={() => setIsCreateOpen(true)} className="inline-flex items-center rounded-lg px-3 py-2 text-xs font-bold shadow-sm transition-all bg-[#23b35b] text-white hover:bg-[#1ea651]">
+    <button onClick={() => setIsCreateOpen(true)} className="inline-flex items-center rounded-lg px-2.5 py-1.5 text-xs font-bold shadow-sm transition-all bg-[#23b35b] text-white hover:bg-[#1ea651]">
       <Plus className="mr-1.5 h-4 w-4" />
       เพิ่มรถ
     </button>
   );
 
-  const headerActionContainer = typeof document !== 'undefined' ? document.getElementById('header-extra-actions') : null;
-  const headerActionMobileContainer = typeof document !== 'undefined' ? document.getElementById('header-extra-actions-mobile') : null;
+  const headerActionContainer = isMounted ? document.getElementById('header-extra-actions') : null;
+  const headerActionMobileContainer = isMounted ? document.getElementById('header-extra-actions-mobile') : null;
   const desktopPortal = headerActionContainer ? createPortal(createButtonDesktop, headerActionContainer) : null;
   const mobilePortal = headerActionMobileContainer ? createPortal(createButtonMobile, headerActionMobileContainer) : null;
 
@@ -61,12 +64,12 @@ export default function CarsManagementClient({ cars }: { cars: CarRow[] }) {
           <table className="min-w-full">
             <thead>
               <tr className="bg-[#f7fbf7]">
-                <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest italic">หมายเลขรถ</th>
-                <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest italic">ข้อมูลรถ</th>
-                <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest italic"><span className="inline-flex items-center gap-2"><Tag className="w-3.5 h-3.5" />เลขทะเบียน</span></th>
-                <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest italic">ประเภทรถ</th>
-                <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest italic"><span className="inline-flex items-center gap-2"><CircleCheckBig className="w-3.5 h-3.5" />สถานะ</span></th>
-                <th className="px-8 py-4 text-right text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest italic">ดำเนินการ</th>
+                <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest">หมายเลขรถ</th>
+                <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest">ข้อมูลรถ</th>
+                <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest"><span className="inline-flex items-center gap-2"><Tag className="w-3.5 h-3.5" />เลขทะเบียน</span></th>
+                <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest">ประเภทรถ</th>
+                <th className="px-8 py-4 text-left text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest"><span className="inline-flex items-center gap-2"><CircleCheckBig className="w-3.5 h-3.5" />สถานะ</span></th>
+                <th className="px-8 py-4 text-right text-[11px] font-black text-[#5f8f6b] uppercase tracking-widest">ดำเนินการ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#edf5ef]">
@@ -99,7 +102,7 @@ export default function CarsManagementClient({ cars }: { cars: CarRow[] }) {
                     <div className="text-sm font-black text-[#2f6b43] bg-[#f4fbf5] px-3 py-1.5 rounded-lg inline-block border border-[#d7efdb]">{car.license_plate}</div>
                   </td>
                   <td className="px-8 py-6">
-                    <span className={cn('inline-flex items-center px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest shadow-sm', car.car_type === 'รถตู้นั่งบรรทุก' ? 'bg-lime-100 text-lime-800' : car.car_type === 'รถยนต์บรรทุก' ? 'bg-amber-50 text-amber-600' : car.car_type === 'รถยนต์นั่งบรรทุก4ประตู' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600')}>
+                    <span className={cn('inline-flex items-center px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest shadow-sm', 'bg-emerald-50 text-emerald-700')}>
                       {car.car_type || 'ไม่ระบุประเภท'}
                     </span>
                   </td>

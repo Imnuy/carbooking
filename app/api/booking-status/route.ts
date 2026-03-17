@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
-import pool, { queryWithEncoding } from '@/lib/db';
+import { queryWithEncoding } from '@/lib/db';
+import { getBookingStatuses } from '@/lib/master-data';
 
 export async function GET() {
   try {
-    const bookingStatuses = await queryWithEncoding(
-      'SELECT id, code, status, description FROM booking_status ORDER BY id ASC'
-    );
-
-    return NextResponse.json(bookingStatuses);
+    const rows = await getBookingStatuses();
+    return NextResponse.json(rows);
   } catch (error) {
     console.error('Error fetching booking statuses:', error);
     return NextResponse.json({ error: 'Failed to fetch booking statuses' }, { status: 500 });
@@ -17,15 +15,18 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { code, status, description } = body;
+    const name = typeof body?.name === 'string' ? body.name.trim() : '';
 
-    const result = await queryWithEncoding(
-      `INSERT INTO booking_status (code, status, description, created_by, updated_by) 
-       VALUES ($1, $2, $3, 'admin', 'admin') RETURNING id`,
-      [code, status, description || null]
+    if (!name) {
+      return NextResponse.json({ error: 'Status name is required' }, { status: 400 });
+    }
+
+    await queryWithEncoding(
+      'INSERT INTO booking_status (name, is_active) VALUES ($1, COALESCE($2, TRUE))',
+      [name, body?.is_active ?? true]
     );
 
-    return NextResponse.json({ success: true, id: result[0].id });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error creating booking status:', error);
     return NextResponse.json({ error: 'Failed to create booking status' }, { status: 500 });

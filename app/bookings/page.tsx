@@ -1,7 +1,8 @@
 import { queryWithEncoding } from '@/lib/db';
 import BookingListClient from '@/components/BookingListClient';
-import { ensureTripsSchema, resolveBookingStatusColumn } from '@/lib/booking-trip';
+import { ensureTripsSchema } from '@/lib/booking-trip';
 import { ensureCarTypeSchema } from '@/lib/car-type';
+import { ensureMasterDataSchema, getBookingStatusIds } from '@/lib/master-data';
 
 export default async function BookingsPage({
   searchParams,
@@ -9,46 +10,46 @@ export default async function BookingsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const sort = typeof params.sort === 'string' ? params.sort : 'created_at';
-  const order = typeof params.order === 'string' ? params.order.toLowerCase() : 'desc';
+  const sort = typeof params.sort === 'string' ? params.sort : 'start_time';
+  const order = typeof params.order === 'string' ? params.order.toLowerCase() : 'asc';
 
   const validSortColumns = ['id', 'start_time', 'created_at'];
-  const orderBy = validSortColumns.includes(sort) ? `b.${sort}` : 'b.created_at';
-  const sortOrder = order === 'asc' ? 'ASC' : 'DESC';
+  const orderBy = validSortColumns.includes(sort) ? `b.${sort}` : 'b.start_time';
+  const sortOrder = order === 'desc' ? 'DESC' : 'ASC';
 
   await ensureTripsSchema();
   await ensureCarTypeSchema();
-  const statusColumn = await resolveBookingStatusColumn();
+  await ensureMasterDataSchema();
+  const statusIds = await getBookingStatusIds();
   const bookings = await queryWithEncoding(
     `SELECT
        b.*,
-       b.${statusColumn} AS status_code,
+       b.status_id,
+       bs.name AS status_text,
        COALESCE(t.car_id, b.car_id) AS car_id,
        COALESCE(t.driver_id, b.driver_id) AS driver_id,
-       COALESCE(d.fullname, b.driver_name) AS driver_name,
+       d.fullname AS driver_name,
        c.brand,
        c.model,
        c.license_plate,
-       ct.car_type,
-       u.fullname as owner_name,
-       bs.status as status_text,
+       ct.name AS car_type,
        t.start_date_time AS trip_start_date_time,
        t.end_date_time AS trip_end_date_time
-     FROM bookings b 
+     FROM bookings b
      LEFT JOIN trips t ON b.trip_id = t.id
-     LEFT JOIN cars c ON COALESCE(t.car_id, b.car_id) = c.id 
+     LEFT JOIN cars c ON COALESCE(t.car_id, b.car_id) = c.id
      LEFT JOIN car_type ct ON c.car_type_id = ct.id
      LEFT JOIN drivers d ON COALESCE(t.driver_id, b.driver_id) = d.id
-     JOIN users u ON b.user_id = u.id 
-     LEFT JOIN booking_status bs ON b.${statusColumn} = bs.code
+     LEFT JOIN booking_status bs ON b.status_id = bs.id
      ORDER BY ${orderBy} ${sortOrder}`
   );
 
   return (
-    <BookingListClient 
-      initialBookings={bookings} 
+    <BookingListClient
+      initialBookings={bookings}
       sort={sort}
       order={order}
+      statusIds={statusIds}
     />
   );
 }

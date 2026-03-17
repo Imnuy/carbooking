@@ -1,5 +1,5 @@
 import { queryWithEncoding } from '@/lib/db';
-import { BOOKING_STATUS } from '@/lib/booking-flow';
+import { getBookingStatusIds } from '@/lib/master-data';
 
 interface ExistsRow {
   exists: boolean;
@@ -9,22 +9,8 @@ interface ColumnRow {
   column_name: string;
 }
 
-let bookingStatusColumn: 'status_code' | 'status' | null = null;
-
 export async function resolveBookingStatusColumn() {
-  if (bookingStatusColumn) {
-    return bookingStatusColumn;
-  }
-
-  const columns = await queryWithEncoding(
-    `SELECT column_name
-     FROM information_schema.columns
-     WHERE table_name = 'bookings'
-       AND column_name IN ('status_code', 'status')`
-  ) as ColumnRow[];
-
-  bookingStatusColumn = columns.some((col) => col.column_name === 'status_code') ? 'status_code' : 'status';
-  return bookingStatusColumn;
+  return 'status_id' as const;
 }
 
 export async function ensureTripsSchema() {
@@ -85,29 +71,15 @@ export async function ensureTripsSchema() {
     await queryWithEncoding('ALTER TABLE bookings ADD COLUMN driver_id INTEGER NULL REFERENCES drivers(id) ON DELETE SET NULL');
   }
 
-  if (!bookingColumnNames.includes('driver_name')) {
-    await queryWithEncoding('ALTER TABLE bookings ADD COLUMN driver_name VARCHAR(255)');
-  }
-
-  const statusColumn = await resolveBookingStatusColumn();
-
-  await queryWithEncoding(
-    `UPDATE bookings b
-     SET driver_id = d.id
-     FROM drivers d
-     WHERE b.driver_id IS NULL
-       AND COALESCE(TRIM(b.driver_name), '') <> ''
-       AND LOWER(TRIM(d.fullname)) = LOWER(TRIM(b.driver_name))`
-  );
-
+  const statusIds = await getBookingStatusIds();
   const legacyAssignedBookings = await queryWithEncoding(
     `SELECT id, start_time, end_time, car_id, driver_id, created_at
      FROM bookings
      WHERE trip_id IS NULL
        AND car_id IS NOT NULL
-       AND ${statusColumn} = $1
+       AND status_id = $1
      ORDER BY created_at ASC, id ASC`,
-    [BOOKING_STATUS.assigned]
+    [statusIds.assigned]
   ) as {
     id: number;
     start_time: string;

@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
-import pool, { queryWithEncoding } from '@/lib/db';
+import { queryWithEncoding } from '@/lib/db';
+import { ensureMasterDataSchema } from '@/lib/master-data';
 
 export async function GET() {
   try {
+    await ensureMasterDataSchema();
     const drivers = await queryWithEncoding(
-      `SELECT d.id, d.fullname, d.driver_type_code, dt.driver_type
+      `SELECT d.id, d.fullname, d.driver_type_id, dt.name AS driver_type_name
        FROM drivers d
-       LEFT JOIN driver_type dt ON dt.code = d.driver_type_code
+       LEFT JOIN driver_type dt ON dt.id = d.driver_type_id
        WHERE d.is_active = true
-       ORDER BY dt.code, d.fullname ASC`
+       ORDER BY d.driver_type_id NULLS LAST, d.fullname ASC`
     );
 
     return NextResponse.json(drivers);

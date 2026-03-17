@@ -5,8 +5,6 @@ import { ExternalLink, FileText, X } from 'lucide-react';
 
 interface BookingData {
   id: number;
-  trip_type: 'internal' | 'external';
-  status_code: string;
 }
 
 export default function ExportBookingDoc({ booking }: { booking: BookingData }) {
@@ -15,7 +13,6 @@ export default function ExportBookingDoc({ booking }: { booking: BookingData }) 
 
   const openInNewTab = () => {
     const popup = window.open(previewUrl, '_blank', 'noopener,noreferrer');
-
     if (!popup) {
       window.location.href = previewUrl;
     }

@@ -1,26 +1,29 @@
 import { NextResponse } from 'next/server';
 import { queryWithEncoding } from '@/lib/db';
+import { ensureMasterDataSchema, isValidUserRole } from '@/lib/master-data';
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureMasterDataSchema();
     const body = await request.json();
-    const { username, password, role, fullname, department } = body;
+    const { username, password, role_id, fullname, department } = body;
     const { id } = await params;
 
     const normalizedUsername = typeof username === 'string' ? username.trim() : '';
     const normalizedPassword = typeof password === 'string' ? password.trim() : '';
-    const normalizedRole = role === 'admin' ? 'admin' : 'user';
+    const normalizedRoleId = Number(role_id);
     const normalizedFullname = typeof fullname === 'string' ? fullname.trim() : '';
     const normalizedDepartment = typeof department === 'string' ? department.trim() : '';
 
-    if (!normalizedUsername || !normalizedFullname) {
-      return NextResponse.json(
-        { error: 'Username and fullname are required' },
-        { status: 400 }
-      );
+    if (!normalizedUsername || !normalizedFullname || !normalizedRoleId) {
+      return NextResponse.json({ error: 'Username, fullname and role are required' }, { status: 400 });
+    }
+
+    if (!(await isValidUserRole(normalizedRoleId))) {
+      return NextResponse.json({ error: 'Invalid user role' }, { status: 400 });
     }
 
     const existing = await queryWithEncoding('SELECT id FROM users WHERE username = $1 AND id <> $2', [normalizedUsername, id]);
@@ -33,23 +36,23 @@ export async function PATCH(
         `UPDATE users
          SET username = $1,
              password = $2,
-             role = $3,
+             role_id = $3,
              fullname = $4,
              department = $5,
              updated_by = $6
          WHERE id = $7`,
-        [normalizedUsername, normalizedPassword, normalizedRole, normalizedFullname, normalizedDepartment || null, 'admin', id]
+        [normalizedUsername, normalizedPassword, normalizedRoleId, normalizedFullname, normalizedDepartment || null, 'admin', id]
       );
     } else {
       await queryWithEncoding(
         `UPDATE users
          SET username = $1,
-             role = $2,
+             role_id = $2,
              fullname = $3,
              department = $4,
              updated_by = $5
          WHERE id = $6`,
-        [normalizedUsername, normalizedRole, normalizedFullname, normalizedDepartment || null, 'admin', id]
+        [normalizedUsername, normalizedRoleId, normalizedFullname, normalizedDepartment || null, 'admin', id]
       );
     }
 

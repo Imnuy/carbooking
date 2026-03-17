@@ -1,7 +1,7 @@
 import { queryWithEncoding } from '@/lib/db';
-import { isTripType, TripType } from '@/lib/booking-flow';
-import { ensureTripsSchema, resolveBookingStatusColumn } from '@/lib/booking-trip';
+import { ensureTripsSchema } from '@/lib/booking-trip';
 import { ensureCarTypeSchema } from '@/lib/car-type';
+import { ensureMasterDataSchema, getBookingStatusIds } from '@/lib/master-data';
 
 export interface BookingPrintData {
   id: number;
@@ -14,11 +14,12 @@ export interface BookingPrintData {
   fuel_reimbursement: string | null;
   distance: number | null;
   passengers: number | null;
-  trip_type: TripType;
+  trip_type_id: number | null;
+  trip_type_name: string | null;
   start_time: string;
   end_time: string;
   driver_name: string | null;
-  status_code: string;
+  status_id: number | null;
   created_at: string | null;
   brand: string | null;
   model: string | null;
@@ -26,9 +27,7 @@ export interface BookingPrintData {
   car_type: string | null;
 }
 
-interface BookingPrintRow extends Omit<BookingPrintData, 'trip_type'> {
-  trip_type: string;
-}
+type BookingPrintRow = BookingPrintData;
 
 const THAI_DIGIT_START = 0x0e50;
 
@@ -112,34 +111,34 @@ function selectedVehicleType(data: BookingPrintData) {
     .toLowerCase()
     .replace(/\s+/g, '');
 
-  if (source.includes('รถตู้') || source.includes('ตู้') || source.includes('van') || source.includes('commuter')) {
+  if (source.includes('เธฃเธ–เธ•เธนเน') || source.includes('เธ•เธนเน') || source.includes('van') || source.includes('commuter')) {
     return 'van';
   }
 
   if (
-    source.includes('รถยนต์บรรทุก') ||
+    source.includes('เธฃเธ–เธขเธเธ•เนเธเธฃเธฃเธ—เธธเธ') ||
     source.includes('truck') ||
     source.includes('pickup') ||
     source.includes('d-max')
   ) {
-    return source.includes('4ประตู') ? 'passenger' : 'truck';
+    return source.includes('4เธเธฃเธฐเธ•เธน') ? 'passenger' : 'truck';
   }
 
   return 'passenger';
 }
 
 function vehicleChoice(label: string, checked: boolean) {
-  return `<div class="choice-row"><span class="choice-mark">${checked ? '☑' : '☐'}</span><span>${escapeHtml(
+  return `<div class="choice-row"><span class="choice-mark">${checked ? 'โ‘' : 'โ'}</span><span>${escapeHtml(
     label
   )}</span></div>`;
 }
 
-function documentHeader(tripType: TripType) {
+function documentHeader(tripTypeName: string | null) {
   return `
     <header class="doc-header">
-      <div class="doc-title">ใบขออนุญาตใช้รถยนต์ส่วนกลาง</div>
-      <div class="doc-subtitle">(${tripType === 'external' ? 'ต่างจังหวัด' : 'ในจังหวัด'})</div>
-      <div class="doc-office">สำนักงานสาธารณสุขจังหวัดพิษณุโลก</div>
+      <div class="doc-title">เนเธเธเธญเธญเธเธธเธเธฒเธ•เนเธเนเธฃเธ–เธขเธเธ•เนเธชเนเธงเธเธเธฅเธฒเธ</div>
+      <div class="doc-subtitle">(${escapeHtml(cleanValue(tripTypeName) || '-')})</div>
+      <div class="doc-office">เธชเธณเธเธฑเธเธเธฒเธเธชเธฒเธเธฒเธฃเธ“เธชเธธเธเธเธฑเธเธซเธงเธฑเธ”เธเธดเธฉเธ“เธธเนเธฅเธ</div>
     </header>
   `;
 }
@@ -151,57 +150,57 @@ function internalTemplate(data: BookingPrintData) {
 
   return `
     <section class="document internal-document">
-      ${documentHeader(data.trip_type)}
+      ${documentHeader(data.trip_type_name)}
 
       <div class="form-block">
-        <p class="text-row">เรียน นายแพทย์สาธารณสุขจังหวัดพิษณุโลก</p>
+        <p class="text-row">เน€เธฃเธตเธขเธ เธเธฒเธขเนเธเธ—เธขเนเธชเธฒเธเธฒเธฃเธ“เธชเธธเธเธเธฑเธเธซเธงเธฑเธ”เธเธดเธฉเธ“เธธเนเธฅเธ</p>
 
         <p class="text-row indent">
-          ข้าพเจ้า ${inlineField(data.requester_name, '54mm')}
-          ตำแหน่ง ${inlineField(data.requester_position, '84mm')}
+          เธเนเธฒเธเน€เธเนเธฒ ${inlineField(data.requester_name, '54mm')}
+          เธ•เธณเนเธซเธเนเธ ${inlineField(data.requester_position, '84mm')}
         </p>
 
         <p class="text-row">
-          ขออนุญาตใช้รถยนต์ไปราชการที่ ${inlineField(data.destination, '132mm')}
+          เธเธญเธญเธเธธเธเธฒเธ•เนเธเนเธฃเธ–เธขเธเธ•เนเนเธเธฃเธฒเธเธเธฒเธฃเธ—เธตเน ${inlineField(data.destination, '132mm')}
         </p>
 
-        <p class="text-row">เพื่อ ${inlineField(data.purpose, '162mm')}</p>
+        <p class="text-row">เน€เธเธทเนเธญ ${inlineField(data.purpose, '162mm')}</p>
 
         <p class="text-row">
-          มีคนนั่ง ${inlineField(data.passengers, '16mm')} คน
-          &nbsp;&nbsp;&nbsp;&nbsp;ในวันที่ ${inlineField(start.day, '12mm')}
-          เดือน ${inlineField(start.month, '26mm')}
-          พ.ศ. ${inlineField(start.year, '18mm')}
-          เวลา ${inlineField(formatTime(data.start_time), '22mm')} น.
-        </p>
-
-        <p class="text-row">
-          ถึงวันที่ ${inlineField(end.day, '12mm')}
-          เดือน ${inlineField(end.month, '26mm')}
-          พ.ศ. ${inlineField(end.year, '18mm')}
-          เวลา ${inlineField(formatTime(data.end_time), '22mm')} น.
+          เธกเธตเธเธเธเธฑเนเธ ${inlineField(data.passengers, '16mm')} เธเธ
+          &nbsp;&nbsp;&nbsp;&nbsp;เนเธเธงเธฑเธเธ—เธตเน ${inlineField(start.day, '12mm')}
+          เน€เธ”เธทเธญเธ ${inlineField(start.month, '26mm')}
+          เธ.เธจ. ${inlineField(start.year, '18mm')}
+          เน€เธงเธฅเธฒ ${inlineField(formatTime(data.start_time), '22mm')} เธ.
         </p>
 
         <p class="text-row">
-          โดยมี ${inlineField(data.supervisor_name, '120mm')}
-          เป็นผู้ควบคุมรถ
+          เธ–เธถเธเธงเธฑเธเธ—เธตเน ${inlineField(end.day, '12mm')}
+          เน€เธ”เธทเธญเธ ${inlineField(end.month, '26mm')}
+          เธ.เธจ. ${inlineField(end.year, '18mm')}
+          เน€เธงเธฅเธฒ ${inlineField(formatTime(data.end_time), '22mm')} เธ.
         </p>
 
-        <p class="text-row note-row">** หมายเหตุ กำหนดการตามเอกสารแนบ</p>
+        <p class="text-row">
+          เนเธ”เธขเธกเธต ${inlineField(data.supervisor_name, '120mm')}
+          เน€เธเนเธเธเธนเนเธเธงเธเธเธธเธกเธฃเธ–
+        </p>
+
+        <p class="text-row note-row">** เธซเธกเธฒเธขเน€เธซเธ•เธธ เธเธณเธซเธเธ”เธเธฒเธฃเธ•เธฒเธกเน€เธญเธเธชเธฒเธฃเนเธเธ</p>
       </div>
 
       <div class="internal-signatures">
         <div class="signature-panel">
-          ${lineLabel('ผู้ขออนุญาต')}
+          ${lineLabel('เธเธนเนเธเธญเธญเธเธธเธเธฒเธ•')}
           <div class="signature-name">${signatureName(data.requester_name)}</div>
 
           <div class="signature-spacer"></div>
 
-          ${lineLabel('หัวหน้ากลุ่มงาน/งาน')}
+          ${lineLabel('เธซเธฑเธงเธซเธเนเธฒเธเธฅเธธเนเธกเธเธฒเธ/เธเธฒเธ')}
         </div>
       </div>
 
-      <div class="submitted-box">วันที่ส่งใบขอ ${escapeHtml(submittedDate)}</div>
+      <div class="submitted-box">เธงเธฑเธเธ—เธตเนเธชเนเธเนเธเธเธญ ${escapeHtml(submittedDate)}</div>
     </section>
   `;
 }
@@ -214,88 +213,88 @@ function externalTemplate(data: BookingPrintData) {
 
   return `
     <section class="document external-document">
-      ${documentHeader(data.trip_type)}
+      ${documentHeader(data.trip_type_name)}
 
-      <p class="text-row right-align">วันที่ ${escapeHtml(
+      <p class="text-row right-align">เธงเธฑเธเธ—เธตเน ${escapeHtml(
         formatFullDate(data.created_at || data.start_time)
       )}</p>
 
       <div class="form-block">
-        <p class="text-row">เรียน นายแพทย์สาธารณสุขจังหวัดพิษณุโลก</p>
+        <p class="text-row">เน€เธฃเธตเธขเธ เธเธฒเธขเนเธเธ—เธขเนเธชเธฒเธเธฒเธฃเธ“เธชเธธเธเธเธฑเธเธซเธงเธฑเธ”เธเธดเธฉเธ“เธธเนเธฅเธ</p>
 
         <p class="text-row indent">
-          ข้าพเจ้า ${inlineField(data.requester_name, '54mm')}
-          ตำแหน่ง ${inlineField(data.requester_position, '84mm')}
+          เธเนเธฒเธเน€เธเนเธฒ ${inlineField(data.requester_name, '54mm')}
+          เธ•เธณเนเธซเธเนเธ ${inlineField(data.requester_position, '84mm')}
         </p>
 
         <p class="text-row">
-          ขออนุญาตนำรถยนต์ไปราชการที่ ${inlineField(data.destination, '129mm')}
+          เธเธญเธญเธเธธเธเธฒเธ•เธเธณเธฃเธ–เธขเธเธ•เนเนเธเธฃเธฒเธเธเธฒเธฃเธ—เธตเน ${inlineField(data.destination, '129mm')}
         </p>
 
         <p class="text-row">
-          เพื่อ ${inlineField(data.purpose, '85mm')}
-          มีคนนั่ง ${inlineField(data.passengers, '14mm')} คน
+          เน€เธเธทเนเธญ ${inlineField(data.purpose, '85mm')}
+          เธกเธตเธเธเธเธฑเนเธ ${inlineField(data.passengers, '14mm')} เธเธ
         </p>
 
         <p class="text-row">
-          ในวันที่ ${inlineField(start.day, '12mm')}
-          เดือน ${inlineField(start.month, '26mm')}
-          พ.ศ. ${inlineField(start.year, '18mm')}
-          เวลา ${inlineField(formatTime(data.start_time), '22mm')} น.
+          เนเธเธงเธฑเธเธ—เธตเน ${inlineField(start.day, '12mm')}
+          เน€เธ”เธทเธญเธ ${inlineField(start.month, '26mm')}
+          เธ.เธจ. ${inlineField(start.year, '18mm')}
+          เน€เธงเธฅเธฒ ${inlineField(formatTime(data.start_time), '22mm')} เธ.
         </p>
 
         <p class="text-row">
-          ถึงวันที่ ${inlineField(end.day, '12mm')}
-          เดือน ${inlineField(end.month, '26mm')}
-          พ.ศ. ${inlineField(end.year, '18mm')}
-          เวลา ${inlineField(formatTime(data.end_time), '22mm')} น.
+          เธ–เธถเธเธงเธฑเธเธ—เธตเน ${inlineField(end.day, '12mm')}
+          เน€เธ”เธทเธญเธ ${inlineField(end.month, '26mm')}
+          เธ.เธจ. ${inlineField(end.year, '18mm')}
+          เน€เธงเธฅเธฒ ${inlineField(formatTime(data.end_time), '22mm')} เธ.
         </p>
 
         <p class="text-row">
-          โดยมี ${inlineField(data.supervisor_name, '110mm')}
-          เป็นผู้ควบคุมรถ
+          เนเธ”เธขเธกเธต ${inlineField(data.supervisor_name, '110mm')}
+          เน€เธเนเธเธเธนเนเธเธงเธเธเธธเธกเธฃเธ–
         </p>
 
         <p class="text-row">
-          หมายเหตุ เบิกงบประมาณค่าน้ำมันเชื้อเพลิงจากงาน/โครงการ
+          เธซเธกเธฒเธขเน€เธซเธ•เธธ เน€เธเธดเธเธเธเธเธฃเธฐเธกเธฒเธ“เธเนเธฒเธเนเธณเธกเธฑเธเน€เธเธทเนเธญเน€เธเธฅเธดเธเธเธฒเธเธเธฒเธ/เนเธเธฃเธเธเธฒเธฃ
           ${inlineField(data.fuel_reimbursement, '75mm')}
         </p>
       </div>
 
       <div class="vehicle-choices">
-        ${vehicleChoice('รถตู้บรรทุก', vehicleType === 'van')}
-        ${vehicleChoice('รถยนต์บรรทุก', vehicleType === 'truck')}
-        ${vehicleChoice('รถยนต์นั่งบรรทุก 4 ประตู', vehicleType === 'passenger')}
+        ${vehicleChoice('เธฃเธ–เธ•เธนเนเธเธฃเธฃเธ—เธธเธ', vehicleType === 'van')}
+        ${vehicleChoice('เธฃเธ–เธขเธเธ•เนเธเธฃเธฃเธ—เธธเธ', vehicleType === 'truck')}
+        ${vehicleChoice('เธฃเธ–เธขเธเธ•เนเธเธฑเนเธเธเธฃเธฃเธ—เธธเธ 4 เธเธฃเธฐเธ•เธน', vehicleType === 'passenger')}
       </div>
 
       <div class="external-grid">
         <div class="external-left">
-          <p class="text-row">เรียน นายแพทย์สาธารณสุขจังหวัดพิษณุโลก</p>
-          <p class="text-row">1. การไปราชการครั้งนี้</p>
+          <p class="text-row">เน€เธฃเธตเธขเธ เธเธฒเธขเนเธเธ—เธขเนเธชเธฒเธเธฒเธฃเธ“เธชเธธเธเธเธฑเธเธซเธงเธฑเธ”เธเธดเธฉเธ“เธธเนเธฅเธ</p>
+          <p class="text-row">1. เธเธฒเธฃเนเธเธฃเธฒเธเธเธฒเธฃเธเธฃเธฑเนเธเธเธตเน</p>
           <p class="text-row">
-            ( ) เห็นสมควรอนุญาตให้นำรถยนต์ยี่ห้อ ${inlineField(brandModel, '60mm')}
+            ( ) เน€เธซเนเธเธชเธกเธเธงเธฃเธญเธเธธเธเธฒเธ•เนเธซเนเธเธณเธฃเธ–เธขเธเธ•เนเธขเธตเนเธซเนเธญ ${inlineField(brandModel, '60mm')}
           </p>
           <p class="text-row">
-            หมายเลขทะเบียน ${inlineField(data.license_plate, '34mm')}
-            ส่งชื่อ ${inlineField(data.driver_name, '60mm')}
+            เธซเธกเธฒเธขเน€เธฅเธเธ—เธฐเน€เธเธตเธขเธ ${inlineField(data.license_plate, '34mm')}
+            เธชเนเธเธเธทเนเธญ ${inlineField(data.driver_name, '60mm')}
           </p>
-          <p class="text-row">ทำหน้าที่ พนักงานขับรถยนต์</p>
+          <p class="text-row">เธ—เธณเธซเธเนเธฒเธ—เธตเน เธเธเธฑเธเธเธฒเธเธเธฑเธเธฃเธ–เธขเธเธ•เน</p>
           <p class="text-row">( )</p>
-          <p class="text-row">จึงเรียนมาเพื่อโปรดพิจารณาสั่งการต่อไป</p>
-          <p class="text-row">ขอเป็นพระคุณ</p>
+          <p class="text-row">เธเธถเธเน€เธฃเธตเธขเธเธกเธฒเน€เธเธทเนเธญเนเธเธฃเธ”เธเธดเธเธฒเธฃเธ“เธฒเธชเธฑเนเธเธเธฒเธฃเธ•เนเธญเนเธ</p>
+          <p class="text-row">เธเธญเน€เธเนเธเธเธฃเธฐเธเธธเธ“</p>
         </div>
 
         <div class="external-right">
-          ${lineLabel('ผู้ขออนุญาตใช้รถยนต์', '88mm')}
+          ${lineLabel('เธเธนเนเธเธญเธญเธเธธเธเธฒเธ•เนเธเนเธฃเธ–เธขเธเธ•เน', '88mm')}
           <div class="signature-name">${signatureName(data.requester_name)}</div>
 
           <div class="signature-spacer small"></div>
 
-          ${lineLabel('หัวหน้ากลุ่มงาน/งาน', '88mm')}
+          ${lineLabel('เธซเธฑเธงเธซเธเนเธฒเธเธฅเธธเนเธกเธเธฒเธ/เธเธฒเธ', '88mm')}
 
           <div class="signature-spacer"></div>
 
-          ${lineLabel('ผู้มีอำนาจสั่งใช้รถยนต์', '88mm')}
+          ${lineLabel('เธเธนเนเธกเธตเธญเธณเธเธฒเธเธชเธฑเนเธเนเธเนเธฃเธ–เธขเธเธ•เน', '88mm')}
         </div>
       </div>
     </section>
@@ -524,8 +523,8 @@ function shell(title: string, body: string) {
   </head>
   <body>
     <div class="toolbar no-print">
-      <button type="button" onclick="window.print()">พิมพ์เอกสาร</button>
-      <button type="button" onclick="window.close()">ปิดหน้าต่าง</button>
+      <button type="button" onclick="window.print()">เธเธดเธกเธเนเน€เธญเธเธชเธฒเธฃ</button>
+      <button type="button" onclick="window.close()">เธเธดเธ”เธซเธเนเธฒเธ•เนเธฒเธ</button>
     </div>
     <main class="sheet">
       ${body}
@@ -537,7 +536,8 @@ function shell(title: string, body: string) {
 export async function getBookingPrintData(id: string | number) {
   await ensureTripsSchema();
   await ensureCarTypeSchema();
-  const statusColumn = await resolveBookingStatusColumn();
+  await ensureMasterDataSchema();
+  const statusIds = await getBookingStatusIds();
   const rows = (await queryWithEncoding(
     `SELECT
         b.id,
@@ -547,24 +547,27 @@ export async function getBookingPrintData(id: string | number) {
         b.supervisor_position,
         b.destination,
         b.purpose,
-        b.fuel_reimbursement,
+        fr.name AS fuel_reimbursement,
         b.distance,
         b.passengers,
-        b.trip_type,
+        b.trip_type_id,
+        tt.name AS trip_type_name,
         b.start_time,
         b.end_time,
-        COALESCE(d.fullname, b.driver_name) AS driver_name,
-        b.${statusColumn} AS status_code,
+        d.fullname AS driver_name,
+        b.status_id,
         b.created_at,
         c.brand,
         c.model,
         c.license_plate,
-        ct.car_type AS car_type
+        ct.name AS car_type
      FROM bookings b
      LEFT JOIN trips t ON b.trip_id = t.id
      LEFT JOIN cars c ON COALESCE(t.car_id, b.car_id) = c.id
      LEFT JOIN car_type ct ON c.car_type_id = ct.id
      LEFT JOIN drivers d ON COALESCE(t.driver_id, b.driver_id) = d.id
+     LEFT JOIN trip_type tt ON b.trip_type_id = tt.id
+     LEFT JOIN fuel_reimbursement fr ON b.fuel_reimbursement_id = fr.id
      WHERE b.id = $1
      LIMIT 1`,
     [id]
@@ -576,18 +579,13 @@ export async function getBookingPrintData(id: string | number) {
     return null;
   }
 
-  return {
-    ...booking,
-    trip_type: isTripType(booking.trip_type) ? booking.trip_type : 'internal',
-  } satisfies BookingPrintData;
+  return { ...booking, isAssigned: booking.status_id === statusIds.assigned };
 }
 
 export function renderBookingPrintHtml(data: BookingPrintData) {
-  const title = `${cleanValue(data.requester_name) || `booking-${data.id}`} - ${
-    data.trip_type === 'external' ? 'ต่างจังหวัด' : 'ในจังหวัด'
-  }`;
+  const title = `${cleanValue(data.requester_name) || `booking-${data.id}`} - ${cleanValue(data.trip_type_name) || String(data.trip_type_id || '')}`;
 
-  const body = data.trip_type === 'external' ? externalTemplate(data) : internalTemplate(data);
+  const body = externalTemplate(data);
 
   return shell(title, body);
 }

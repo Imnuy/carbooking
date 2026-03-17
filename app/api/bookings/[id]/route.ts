@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server';
 import { queryWithEncoding } from '@/lib/db';
-import { BOOKING_STATUS } from '@/lib/booking-flow';
-import { ensureTripsSchema, resolveBookingStatusColumn, toDateKey } from '@/lib/booking-trip';
+import { ensureTripsSchema, toDateKey } from '@/lib/booking-trip';
+import {
+  ensureMasterDataSchema,
+  getBookingStatusIds,
+  getDefaultFuelReimbursementId,
+  getDefaultTripTypeId,
+  isValidBookingStatus,
+  isValidDepartment,
+  isValidFuelReimbursement,
+  isValidTripType,
+} from '@/lib/master-data';
 
 export async function PATCH(
   request: Request,
@@ -9,22 +18,21 @@ export async function PATCH(
 ) {
   try {
     await ensureTripsSchema();
-    const statusColumn = await resolveBookingStatusColumn();
+    await ensureMasterDataSchema();
     const body = await request.json();
-    const { car_id, driver_id, driver_name, other_ids } = body;
+    const { car_id, driver_id, other_ids } = body;
     const { id } = await params;
 
     const isAssignmentPayload =
       Object.prototype.hasOwnProperty.call(body, 'car_id') ||
       Object.prototype.hasOwnProperty.call(body, 'driver_id') ||
-      Object.prototype.hasOwnProperty.call(body, 'driver_name') ||
       Object.prototype.hasOwnProperty.call(body, 'other_ids');
 
     if (!isAssignmentPayload) {
       const {
         destination,
         purpose,
-        fuel_reimbursement,
+        fuel_reimbursement_id,
         distance,
         start_time,
         end_time,
@@ -32,15 +40,25 @@ export async function PATCH(
         requester_position,
         supervisor_name,
         supervisor_position,
+        department_id,
         passengers,
-        trip_type,
-        status_code,
+        trip_type_id,
+        status_id,
       } = body;
 
       const passengerCount = Number(passengers);
+      const normalizedTripTypeId = Number(trip_type_id) || await getDefaultTripTypeId();
+      const normalizedFuelReimbursementId = Number(fuel_reimbursement_id) || await getDefaultFuelReimbursementId();
+      const normalizedDepartmentId = Number(department_id);
+      const normalizedStatusId = Number(status_id);
+      const statusIds = await getBookingStatusIds();
 
       if (!requester_name || !requester_position || !supervisor_name || !supervisor_position) {
         return NextResponse.json({ error: 'Requester and supervisor information is required' }, { status: 400 });
+      }
+
+      if (!normalizedDepartmentId || !(await isValidDepartment(normalizedDepartmentId))) {
+        return NextResponse.json({ error: 'Department is required' }, { status: 400 });
       }
 
       if (!destination || !purpose || !start_time || !end_time) {
@@ -51,11 +69,23 @@ export async function PATCH(
         return NextResponse.json({ error: 'Passenger count must be at least 1' }, { status: 400 });
       }
 
+      if (!normalizedTripTypeId || !(await isValidTripType(normalizedTripTypeId))) {
+        return NextResponse.json({ error: 'Invalid trip type' }, { status: 400 });
+      }
+
+      if (!normalizedFuelReimbursementId || !(await isValidFuelReimbursement(normalizedFuelReimbursementId))) {
+        return NextResponse.json({ error: 'Invalid fuel reimbursement' }, { status: 400 });
+      }
+
+      if (normalizedStatusId && !(await isValidBookingStatus(normalizedStatusId))) {
+        return NextResponse.json({ error: 'Invalid booking status' }, { status: 400 });
+      }
+
       await queryWithEncoding(
         `UPDATE bookings
          SET destination = $1,
              purpose = $2,
-             fuel_reimbursement = $3,
+             fuel_reimbursement_id = $3,
              distance = $4,
              start_time = $5,
              end_time = $6,
@@ -63,15 +93,15 @@ export async function PATCH(
              requester_position = $8,
              supervisor_name = $9,
              supervisor_position = $10,
-             passengers = $11,
-             trip_type = $12,
-             ${statusColumn} = $13,
-             updated_by = $14
+             department_id = $11,
+             passengers = $12,
+             trip_type_id = $13,
+             status_id = $14
          WHERE id = $15`,
         [
           destination,
           purpose,
-          fuel_reimbursement || null,
+          normalizedFuelReimbursementId,
           distance !== '' && distance !== null && distance !== undefined ? Number(distance) : null,
           start_time,
           end_time,
@@ -79,10 +109,10 @@ export async function PATCH(
           requester_position,
           supervisor_name,
           supervisor_position,
+          normalizedDepartmentId,
           passengerCount,
-          trip_type,
-          status_code || BOOKING_STATUS.pending,
-          'admin',
+          normalizedTripTypeId,
+          normalizedStatusId || statusIds.pending,
           id,
         ]
       );
@@ -92,22 +122,9 @@ export async function PATCH(
 
     const normalizedCarId = car_id ? Number(car_id) : null;
     const normalizedDriverId = driver_id ? Number(driver_id) : null;
-    let normalizedDriverName = typeof driver_name === 'string' ? driver_name.trim() : '';
 
-    if (normalizedDriverId && !normalizedDriverName) {
-      const driverRows = await queryWithEncoding(
-        'SELECT fullname FROM drivers WHERE id = $1 LIMIT 1',
-        [normalizedDriverId]
-      ) as { fullname: string }[];
-
-      normalizedDriverName = driverRows[0]?.fullname?.trim() || '';
-    }
-
-    if (!normalizedCarId || !normalizedDriverId || !normalizedDriverName) {
-      return NextResponse.json(
-        { error: 'Car and driver are required before assigning a trip' },
-        { status: 400 }
-      );
+    if (!normalizedCarId || !normalizedDriverId) {
+      return NextResponse.json({ error: 'Car and driver are required before assigning a trip' }, { status: 400 });
     }
 
     const targetIds = [Number(id), ...(Array.isArray(other_ids) ? other_ids.map(Number) : [])]
@@ -121,17 +138,10 @@ export async function PATCH(
         [targetIds]
       ) as { id: number; start_time: string; end_time: string; trip_id: number | null }[];
 
-      const dateKeys = Array.from(
-        new Set(
-          bookingRows.map((row) => toDateKey(row.start_time)).filter(Boolean)
-        )
-      );
+      const dateKeys = Array.from(new Set(bookingRows.map((row) => toDateKey(row.start_time)).filter(Boolean)));
 
       if (dateKeys.length > 1 || bookingRows.length !== targetIds.length) {
-        return NextResponse.json(
-          { error: 'Trips can only be merged when departure date is the same' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'Trips can only be merged when departure date is the same' }, { status: 400 });
       }
     }
 
@@ -147,12 +157,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
 
-    const tripStartDateTime = bookingRows
-      .map((row) => row.start_time)
-      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
-    const tripEndDateTime = bookingRows
-      .map((row) => row.end_time)
-      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+    const tripStartDateTime = bookingRows.map((row) => row.start_time).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
+    const tripEndDateTime = bookingRows.map((row) => row.end_time).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
 
     let tripId = baseBooking.trip_id;
 
@@ -191,22 +197,21 @@ export async function PATCH(
       return NextResponse.json({ error: 'Failed to create trip' }, { status: 500 });
     }
 
+    const statusIds = await getBookingStatusIds();
     await queryWithEncoding(
       `UPDATE bookings
        SET trip_id = $1,
            car_id = $2,
            driver_id = $3,
-           driver_name = $4,
-           ${statusColumn} = $5,
-           updated_by = $6
-       WHERE id = ANY($7::int[])`,
-      [tripId, normalizedCarId, normalizedDriverId, normalizedDriverName, BOOKING_STATUS.assigned, 'admin', targetIds]
+           status_id = $4
+       WHERE id = ANY($5::int[])`,
+      [tripId, normalizedCarId, normalizedDriverId, statusIds.assigned, targetIds]
     );
 
     return NextResponse.json({
       message: 'Bookings assigned successfully',
       trip_id: tripId,
-      status_code: BOOKING_STATUS.assigned,
+      status_id: statusIds.assigned,
       affected_ids: targetIds,
     });
   } catch (error) {
@@ -216,35 +221,48 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureTripsSchema();
+    await ensureMasterDataSchema();
     const { id } = await params;
+
     const bookingRows = await queryWithEncoding(
       'SELECT trip_id FROM bookings WHERE id = $1 LIMIT 1',
       [id]
     ) as { trip_id: number | null }[];
-
     const tripId = bookingRows[0]?.trip_id ?? null;
 
-    await queryWithEncoding('DELETE FROM bookings WHERE id = $1', [id]);
+    const statusIds = await getBookingStatusIds();
+    await queryWithEncoding(
+      'UPDATE bookings SET status_id = $1, trip_id = NULL, car_id = NULL, driver_id = NULL WHERE id = $2',
+      [statusIds.cancelled, id]
+    );
 
     if (tripId) {
-      const remainingRows = await queryWithEncoding(
-        'SELECT id FROM bookings WHERE trip_id = $1 LIMIT 1',
-        [tripId]
-      ) as { id: number }[];
+      const remaining = await queryWithEncoding(
+        `SELECT start_time, end_time FROM bookings
+         WHERE trip_id = $1 AND status_id != $2`,
+        [tripId, statusIds.cancelled]
+      ) as { start_time: string; end_time: string }[];
 
-      if (remainingRows.length === 0) {
+      if (remaining.length === 0) {
         await queryWithEncoding('DELETE FROM trips WHERE id = $1', [tripId]);
+      } else {
+        const newStart = remaining.map((r) => r.start_time).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
+        const newEnd = remaining.map((r) => r.end_time).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+        await queryWithEncoding(
+          'UPDATE trips SET start_date_time = $1, end_date_time = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+          [newStart, newEnd, tripId]
+        );
       }
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting booking:', error);
-    return NextResponse.json({ error: 'Failed to delete booking' }, { status: 500 });
+    console.error('Error cancelling booking:', error);
+    return NextResponse.json({ error: 'Failed to cancel booking' }, { status: 500 });
   }
 }

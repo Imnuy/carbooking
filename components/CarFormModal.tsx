@@ -7,7 +7,7 @@ import { showError, showSuccess } from '@/lib/swal';
 
 interface CarTypeOption {
   id: number;
-  car_type: string;
+  name: string;
 }
 
 interface CarFormModalProps {
@@ -67,9 +67,10 @@ export default function CarFormModal({ isOpen, onClose, car }: CarFormModalProps
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
-          setCarTypes(data);
-          if (!car && data[0]?.id) {
-            setFormData((current) => ({ ...current, car_type_id: String(data[0].id) }));
+          const options = data.filter((item): item is CarTypeOption => typeof item?.id === 'number' && typeof item?.name === 'string');
+          setCarTypes(options);
+          if (!car && options[0]?.id) {
+            setFormData((current) => ({ ...current, car_type_id: String(options[0].id) }));
           }
         }
       })
@@ -93,7 +94,7 @@ export default function CarFormModal({ isOpen, onClose, car }: CarFormModalProps
         body: JSON.stringify({
           ...formData,
           car_type_id: formData.car_type_id ? Number(formData.car_type_id) : null,
-          car_type: selectedCarType?.car_type || null,
+          car_type: selectedCarType?.name || null,
         }),
       });
 
@@ -163,7 +164,7 @@ export default function CarFormModal({ isOpen, onClose, car }: CarFormModalProps
               <select required value={formData.car_type_id} onChange={(e) => setFormData({ ...formData, car_type_id: e.target.value })} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-900 transition-all font-bold text-slate-700 cursor-pointer">
                 <option value="">เลือกประเภทรถ</option>
                 {carTypes.map((item) => (
-                  <option key={item.id} value={item.id}>{item.car_type}</option>
+                  <option key={item.id} value={item.id}>{item.name}</option>
                 ))}
               </select>
               {fetchingCarTypes && <p className="text-xs text-slate-400">กำลังดึงข้อมูลประเภทรถ...</p>}

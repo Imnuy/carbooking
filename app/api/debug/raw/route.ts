@@ -6,7 +6,7 @@ export async function GET() {
   try {
     await ensureCarTypeSchema();
     const rows = await queryWithEncoding(
-      `SELECT c.id, c.brand, c.model, c.license_plate, ct.car_type, c.is_active
+      `SELECT c.id, c.brand, c.model, c.license_plate, ct.name AS car_type, c.is_active
        FROM cars c
        LEFT JOIN car_type ct ON c.car_type_id = ct.id
        ORDER BY c.id`

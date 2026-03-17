@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server';
 import { queryWithEncoding } from '@/lib/db';
-import { BOOKING_STATUS } from '@/lib/booking-flow';
-import { ensureTripsSchema, resolveBookingStatusColumn } from '@/lib/booking-trip';
+import { getBookingStatusIds } from '@/lib/master-data';
+import { ensureTripsSchema } from '@/lib/booking-trip';
 
 export async function GET() {
   try {
     await ensureTripsSchema();
-    const statusColumn = await resolveBookingStatusColumn();
+    const statusIds = await getBookingStatusIds();
     const rows = await queryWithEncoding(
-      `SELECT id, trip_id, requester_name, destination, start_time, end_time, trip_type, passengers
+      `SELECT id, trip_id, requester_name, destination, start_time, end_time, trip_type_id, passengers
        FROM bookings
-       WHERE ${statusColumn} = $1
+       WHERE status_id = $1
        ORDER BY created_at DESC`,
-      [BOOKING_STATUS.pending]
+      [statusIds.pending]
     );
 
     return NextResponse.json(rows);

@@ -1,36 +1,44 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { 
-  Plus, 
-  Calendar, 
-  Loader2, 
-  Users, 
-  User, 
-  Briefcase, 
-  MapPin, 
-  Gauge, 
-  Compass,
-  Check
+import {
+  Briefcase,
+  Building2,
+  Calendar,
+  Check,
+  Loader2,
+  MapPin,
+  Plus,
+  User,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+interface MasterOption {
+  id: number;
+  name: string;
+}
 
 export default function AddBookingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [departments, setDepartments] = useState<MasterOption[]>([]);
+  const [tripTypes, setTripTypes] = useState<MasterOption[]>([]);
+  const [fuelOptions, setFuelOptions] = useState<MasterOption[]>([]);
   const [passengerCount, setPassengerCount] = useState(1);
   const [formData, setFormData] = useState({
     requester_name: '',
     requester_position: '',
     supervisor_name: '',
     supervisor_position: '',
+    department_id: '',
     destination: '',
     purpose: '',
-    fuel_reimbursement: 'หน่วยงานต้นสังกัด',
+    fuel_reimbursement_id: '',
     distance: '',
-    trip_type: 'internal',
+    trip_type_id: '',
     start_time: (() => {
       const d = new Date();
       d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -45,6 +53,29 @@ export default function AddBookingPage() {
     })(),
   });
 
+  useEffect(() => {
+    const fetchMaster = (url: string, setter: (data: MasterOption[]) => void, autoSelectField?: string) => {
+      fetch(url)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!Array.isArray(data)) return;
+          const options = data.filter((item): item is MasterOption => typeof item?.id === 'number' && typeof item?.name === 'string');
+          setter(options);
+          if (autoSelectField && options.length > 0) {
+            setFormData((current) => ({
+              ...current,
+              [autoSelectField]: current[autoSelectField as keyof typeof current] || String(options[0].id),
+            }));
+          }
+        })
+        .catch((error) => console.error(`Failed to load ${url}:`, error));
+    };
+
+    fetchMaster('/api/departments', setDepartments);
+    fetchMaster('/api/trip-types', setTripTypes, 'trip_type_id');
+    fetchMaster('/api/fuel-reimbursements', setFuelOptions, 'fuel_reimbursement_id');
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -55,15 +86,19 @@ export default function AddBookingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          passengers: passengerCount
-        })
+          department_id: Number(formData.department_id),
+          trip_type_id: Number(formData.trip_type_id),
+          fuel_reimbursement_id: Number(formData.fuel_reimbursement_id),
+          passengers: passengerCount,
+        }),
       });
 
       if (response.ok) {
         router.push('/bookings');
         router.refresh();
       } else {
-        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+        const result = await response.json().catch(() => null);
+        alert(result?.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
       }
     } catch (error) {
       console.error(error);
@@ -74,258 +109,215 @@ export default function AddBookingPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="mx-auto max-w-5xl animate-in slide-in-from-bottom-4 space-y-6 pb-20 duration-500 md:space-y-8">
       <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
-        {/* Section 1: Requester & Supervisor */}
-        <div className="bg-white rounded-3xl md:rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-10">
-          <div className="flex items-center space-x-3 mb-6 md:mb-8">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-50 rounded-lg md:rounded-xl flex items-center justify-center text-indigo-600">
-              <User className="w-4 h-4 md:w-5 md:h-5" />
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_20px_50px_rgba(0,0,0,0.04)] md:rounded-[2.5rem] md:p-10">
+          <div className="mb-6 flex items-center space-x-3 md:mb-8">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 md:h-10 md:w-10 md:rounded-xl">
+              <User className="h-4 w-4 md:h-5 md:w-5" />
             </div>
-            <h2 className="text-lg md:text-xl font-bold text-slate-800">ข้อมูลผู้ขอและผู้ควบคุม</h2>
+            <h2 className="text-lg font-black text-slate-800 md:text-xl">ข้อมูลผู้ขอและหน่วยงาน</h2>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-            <div className="space-y-2">
-              <label className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center">
-                <User className="w-3 h-3 mr-1" /> ชื่อนาม-สกุล ผู้ขอ
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
+            <div className="space-y-2 md:col-span-2">
+              <label className="ml-1 flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">
+                <Building2 className="mr-1 h-3 w-3" /> หน่วยงาน / แผนก
               </label>
-              <input 
+              <select
                 required
-                type="text" 
+                value={formData.department_id}
+                onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
+                className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
+              >
+                <option value="">เลือกหน่วยงาน</option>
+                {departments.map((department) => (
+                  <option key={department.id} value={department.id}>{department.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="ml-1 flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">
+                <User className="mr-1 h-3 w-3" /> ชื่อ-นามสกุล ผู้ขอ
+              </label>
+              <input
+                required
+                type="text"
                 value={formData.requester_name}
-                onChange={(e) => setFormData({...formData, requester_name: e.target.value})}
-                className="w-full px-5 md:px-6 py-3 md:py-4 bg-slate-50 border-none rounded-xl md:rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 text-sm md:text-base" 
-                placeholder="ระบุชื่อ-นามสกุล..." 
+                onChange={(e) => setFormData({ ...formData, requester_name: e.target.value })}
+                className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1 flex items-center">
-                <Briefcase className="w-3 h-3 mr-1" /> ตำแหน่ง ผู้ขอ
+              <label className="ml-1 flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">
+                <Briefcase className="mr-1 h-3 w-3" /> ตำแหน่ง ผู้ขอ
               </label>
-              <input 
+              <input
                 required
-                type="text" 
+                type="text"
                 value={formData.requester_position}
-                onChange={(e) => setFormData({...formData, requester_position: e.target.value})}
-                className="w-full px-5 md:px-6 py-3 md:py-4 bg-slate-50 border-none rounded-xl md:rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 text-sm md:text-base" 
-                placeholder="ระบุตำแหน่ง..." 
+                onChange={(e) => setFormData({ ...formData, requester_position: e.target.value })}
+                className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center">
-                <User className="w-3 h-3 mr-1" /> ชื่อนาม-สกุล ผู้ควบคุมรถ
+              <label className="ml-1 flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">
+                <User className="mr-1 h-3 w-3" /> ชื่อ-นามสกุล ผู้ควบคุมรถ
               </label>
-              <input 
+              <input
                 required
-                type="text" 
+                type="text"
                 value={formData.supervisor_name}
-                onChange={(e) => setFormData({...formData, supervisor_name: e.target.value})}
-                className="w-full px-5 md:px-6 py-3 md:py-4 bg-slate-50 border-none rounded-xl md:rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 text-sm md:text-base" 
-                placeholder="ระบุชื่อ-นามสกุล..." 
+                onChange={(e) => setFormData({ ...formData, supervisor_name: e.target.value })}
+                className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center">
-                <Briefcase className="w-3 h-3 mr-1" /> ตำแหน่ง ผู้ควบคุมรถ
+              <label className="ml-1 flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">
+                <Briefcase className="mr-1 h-3 w-3" /> ตำแหน่ง ผู้ควบคุมรถ
               </label>
-              <input 
+              <input
                 required
-                type="text" 
+                type="text"
                 value={formData.supervisor_position}
-                onChange={(e) => setFormData({...formData, supervisor_position: e.target.value})}
-                className="w-full px-5 md:px-6 py-3 md:py-4 bg-slate-50 border-none rounded-xl md:rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 text-sm md:text-base" 
-                placeholder="ระบุตำแหน่ง..." 
+                onChange={(e) => setFormData({ ...formData, supervisor_position: e.target.value })}
+                className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
               />
             </div>
           </div>
         </div>
 
-        {/* Section 2: Destination & Time */}
-        <div className="bg-white rounded-3xl md:rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-10">
-          <div className="flex items-center space-x-3 mb-6 md:mb-8">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-rose-50 rounded-lg md:rounded-xl flex items-center justify-center text-rose-600">
-              <MapPin className="w-4 h-4 md:w-5 md:h-5" />
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_20px_50px_rgba(0,0,0,0.04)] md:rounded-[2.5rem] md:p-10">
+          <div className="mb-6 flex items-center space-x-3 md:mb-8">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 md:h-10 md:w-10 md:rounded-xl">
+              <MapPin className="h-4 w-4 md:h-5 md:w-5" />
             </div>
-            <h2 className="text-lg md:text-xl font-black text-slate-800">รายละเอียดการเดินทาง</h2>
+            <h2 className="text-lg font-black text-slate-800 md:text-xl">รายละเอียดการเดินทาง</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-            <div className="md:col-span-2 space-y-4">
-              <label className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center">
-                <Compass className="w-3 h-3 mr-1" /> ประเภทการเดินทาง
-              </label>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
+            <div className="space-y-4 md:col-span-2">
+              <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">ประเภทการเดินทาง</label>
               <div className="grid grid-cols-2 gap-3 md:gap-4">
-                <button 
-                  type="button"
-                  onClick={() => setFormData({...formData, trip_type: 'internal'})}
-                  className={cn(
-                    "relative flex flex-col md:flex-row items-center md:justify-between px-4 md:px-8 py-4 md:py-5 rounded-2xl md:rounded-3xl border-2 transition-all font-black text-xs md:text-sm gap-2 text-center md:text-left",
-                    formData.trip_type === 'internal' 
-                      ? "border-indigo-600 bg-indigo-50 text-indigo-700" 
-                      : "border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-200"
-                  )}
-                >
-                  <span>1. ภายในจังหวัด</span>
-                  {formData.trip_type === 'internal' && <Check className="w-4 h-4 md:w-5 md:h-5" />}
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setFormData({...formData, trip_type: 'external'})}
-                  className={cn(
-                    "relative flex flex-col md:flex-row items-center md:justify-between px-4 md:px-8 py-4 md:py-5 rounded-2xl md:rounded-3xl border-2 transition-all font-black text-xs md:text-sm gap-2 text-center md:text-left",
-                    formData.trip_type === 'external' 
-                      ? "border-indigo-600 bg-indigo-50 text-indigo-700" 
-                      : "border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-200"
-                  )}
-                >
-                  <span>2. ต่างจังหวัด</span>
-                  {formData.trip_type === 'external' && <Check className="w-4 h-4 md:w-5 md:h-5" />}
-                </button>
+                {tripTypes.map((item, index) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, trip_type_id: String(item.id) })}
+                    className={cn(
+                      'flex items-center justify-between rounded-2xl border-2 px-4 py-4 text-xs font-black transition-all md:px-8 md:py-5 md:text-sm',
+                      formData.trip_type_id === String(item.id)
+                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                        : 'border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-200'
+                    )}
+                  >
+                    <span>{index + 1}. {item.name}</span>
+                    {formData.trip_type_id === String(item.id) && <Check className="h-4 w-4" />}
+                  </button>
+                ))}
               </div>
             </div>
-
-            <div className="md:col-span-2 space-y-2">
-              <label className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">สถานที่ปลายทาง</label>
-              <input 
+            <div className="space-y-2 md:col-span-2">
+              <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">สถานที่/เส้นทาง</label>
+              <input
                 required
-                type="text" 
+                type="text"
                 value={formData.destination}
-                onChange={(e) => setFormData({...formData, destination: e.target.value})}
-                className="w-full px-5 md:px-6 py-3 md:py-4 bg-slate-50 border-none rounded-xl md:rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 text-sm md:text-base" 
-                placeholder="ระบุสถานที่..." 
+                onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
+                className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
               />
             </div>
-            <div className="md:col-span-2 space-y-2">
-              <label className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">วัตถุประสงค์การไป</label>
-              <textarea 
+            <div className="space-y-2 md:col-span-2">
+              <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">วัตถุประสงค์การเดินทาง</label>
+              <textarea
                 required
                 rows={3}
                 value={formData.purpose}
-                onChange={(e) => setFormData({...formData, purpose: e.target.value})}
-                className="w-full px-5 md:px-6 py-3 md:py-4 bg-slate-50 border-none rounded-xl md:rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 text-sm md:text-base resize-none" 
-                placeholder="ระบุวัตถุประสงค์การเดินทาง..." 
+                onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                className="w-full resize-none rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
               />
             </div>
-            
-            <div className="md:col-span-2 space-y-4">
-              <label className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center">
-                <Gauge className="w-3 h-3 mr-1" /> การเบิกค่าเชื้อเพลิง
-              </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                <button 
-                  type="button"
-                  onClick={() => setFormData({...formData, fuel_reimbursement: 'หน่วยงานต้นสังกัด'})}
-                  className={cn(
-                    "flex items-center justify-between px-6 py-4 rounded-2xl border-2 transition-all font-bold text-sm",
-                    formData.fuel_reimbursement === 'หน่วยงานต้นสังกัด' 
-                      ? "border-emerald-600 bg-emerald-50 text-emerald-700 shadow-lg shadow-emerald-900/5" 
-                      : "border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-200"
-                  )}
-                >
-                  <span>เบิกจากหน่วยงานต้นสังกัด</span>
-                  {formData.fuel_reimbursement === 'หน่วยงานต้นสังกัด' && <Check className="w-4 h-4" />}
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setFormData({...formData, fuel_reimbursement: 'หน่วยงานผู้จัด'})}
-                  className={cn(
-                    "flex items-center justify-between px-6 py-4 rounded-2xl border-2 transition-all font-bold text-sm",
-                    formData.fuel_reimbursement === 'หน่วยงานผู้จัด' 
-                      ? "border-emerald-600 bg-emerald-50 text-emerald-700 shadow-lg shadow-emerald-900/5" 
-                      : "border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-200"
-                  )}
-                >
-                  <span>เบิกจากหน่วยงานผู้จัด</span>
-                  {formData.fuel_reimbursement === 'หน่วยงานผู้จัด' && <Check className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
             <div className="space-y-2">
-              <label className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center">
-                <Gauge className="w-3 h-3 mr-1" /> ระยะทางโดยประมาณ (กม.)
-              </label>
-              <input 
+              <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">บริการเบิกค่าน้ำมัน</label>
+              <select
                 required
-                type="number" 
+                value={formData.fuel_reimbursement_id}
+                onChange={(e) => setFormData({ ...formData, fuel_reimbursement_id: e.target.value })}
+                className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
+              >
+                <option value="">เลือกบริการเบิกค่าน้ำมัน</option>
+                {fuelOptions.map((item) => (
+                  <option key={item.id} value={item.id}>{item.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">ระยะทางประมาณ (กม.)</label>
+              <input
+                required
+                type="number"
                 step="0.01"
                 value={formData.distance}
-                onChange={(e) => setFormData({...formData, distance: e.target.value})}
-                className="w-full px-5 md:px-6 py-3 md:py-4 bg-slate-50 border-none rounded-xl md:rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 text-sm md:text-base" 
-                placeholder="ระบุระยะทาง..." 
-              />
-            </div>
-            <div className="hidden md:block"></div>
-            <div className="space-y-2">
-              <label className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center">
-                <Calendar className="w-3 h-3 mr-1" /> วันเดินทางไป
-              </label>
-              <input 
-                required
-                type="datetime-local" 
-                value={formData.start_time}
-                onChange={(e) => setFormData({...formData, start_time: e.target.value})}
-                className="w-full px-5 md:px-6 py-3 md:py-4 bg-slate-50 border-none rounded-xl md:rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 text-sm md:text-base" 
+                onChange={(e) => setFormData({ ...formData, distance: e.target.value })}
+                className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center">
-                <Calendar className="w-3 h-3 mr-1" /> วันเดินทางกลับ
+              <label className="ml-1 flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">
+                <Users className="mr-1 h-3 w-3" /> จำนวนผู้โดยสาร
               </label>
-              <input 
+              <input
                 required
-                type="datetime-local" 
-                value={formData.end_time}
-                onChange={(e) => setFormData({...formData, end_time: e.target.value})}
-                className="w-full px-5 md:px-6 py-3 md:py-4 bg-slate-50 border-none rounded-xl md:rounded-2xl focus:ring-2 focus:ring-indigo-600 transition-all font-bold text-slate-700 text-sm md:text-base" 
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Section 3: Passenger Count */}
-        <div className="bg-white rounded-3xl md:rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100 p-6 md:p-10">
-          <div className="flex items-center space-x-3 mb-6 md:mb-8">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-emerald-50 rounded-lg md:rounded-xl flex items-center justify-center text-emerald-600">
-              <Users className="w-4 h-4 md:w-5 md:h-5" />
-            </div>
-            <h2 className="text-lg md:text-xl font-black text-slate-800">จำนวนผู้โดยสาร</h2>
-          </div>
-
-          <div className="max-w-xs space-y-4">
-            <div className="flex items-center space-x-4">
-              <input 
-                required
-                type="number" 
+                type="number"
                 min="1"
                 max="50"
                 value={passengerCount}
-                onChange={(e) => setPassengerCount(parseInt(e.target.value) || 1)}
-                className="w-full px-6 py-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-emerald-600 transition-all font-bold text-2xl text-emerald-700 text-center" 
+                onChange={(e) => setPassengerCount(parseInt(e.target.value, 10) || 1)}
+                className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
               />
-              <span className="text-xl font-bold text-slate-500">คน</span>
             </div>
-            <p className="text-[11px] text-slate-400 font-bold uppercase italic ml-2">
-              * กรุณาระบุจำนวนผู้ร่วมเดินทางทั้งหมด (ไม่รวมพนักงานขับรถ)
-            </p>
+            <div className="space-y-2">
+              <label className="ml-1 flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">
+                <Calendar className="mr-1 h-3 w-3" /> วันเดินทางไป
+              </label>
+              <input
+                required
+                type="datetime-local"
+                value={formData.start_time}
+                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="ml-1 flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">
+                <Calendar className="mr-1 h-3 w-3" /> วันเดินทางกลับ
+              </label>
+              <input
+                required
+                type="datetime-local"
+                value={formData.end_time}
+                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
+              />
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center justify-end gap-4 md:space-x-4">
-          <button 
+        <div className="flex flex-col items-center justify-end gap-4 md:flex-row md:space-x-4">
+          <button
             type="submit"
             disabled={loading}
-            className="w-full md:w-auto bg-slate-900 text-white px-10 py-4 md:py-4.5 rounded-2xl font-black text-sm shadow-2xl flex items-center justify-center group disabled:opacity-50 hover:scale-[1.02] active:scale-95 transition-all order-1 md:order-2"
+            className="order-1 flex w-full items-center justify-center rounded-2xl bg-slate-900 px-10 py-4 text-sm font-black text-white shadow-2xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 md:order-2 md:w-auto"
           >
-            {loading ? (
-              <Loader2 className="w-5 h-5 mr-3 animate-spin" />
-            ) : (
-              <Plus className="w-5 h-5 mr-3 group-hover:rotate-90 transition-transform" />
-            )}
-            ยืนยันการบันทึกใบขอใช้รถ
+            {loading ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <Plus className="mr-3 h-5 w-5" />}
+            ยืนยันการบันทึกใบขอรถ
           </button>
-          <Link href="/bookings" className="w-full md:w-auto px-8 py-4 text-sm font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors text-center order-2 md:order-1">ยกเลิก</Link>
+          <Link
+            href="/bookings"
+            className="order-2 w-full px-8 py-4 text-center text-sm font-black uppercase tracking-widest text-slate-400 transition-colors hover:text-slate-900 md:order-1 md:w-auto"
+          >
+            ยกเลิก
+          </Link>
         </div>
       </form>
     </div>

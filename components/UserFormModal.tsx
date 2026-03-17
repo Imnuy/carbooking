@@ -5,6 +5,11 @@ import { Loader2, Save, UserPlus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { showError, showSuccess } from '@/lib/swal';
 
+interface UserRoleOption {
+  id: number;
+  name: string;
+}
+
 interface UserFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -13,37 +18,55 @@ interface UserFormModalProps {
     fullname?: string | null;
     username: string;
     department?: string | null;
-    role: 'admin' | 'user';
+    role_id: number;
   } | null;
 }
-
-const emptyForm = {
-  fullname: '',
-  username: '',
-  password: '',
-  department: '',
-  role: 'user' as 'admin' | 'user',
-};
 
 export default function UserFormModal({ isOpen, onClose, user }: UserFormModalProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState(emptyForm);
+  const [roles, setRoles] = useState<UserRoleOption[]>([]);
+  const [formData, setFormData] = useState({
+    fullname: '',
+    username: '',
+    password: '',
+    department: '',
+    role_id: '',
+  });
 
   useEffect(() => {
-    if (user) {
-      setFormData({
-        fullname: user.fullname || '',
-        username: user.username,
-        password: '',
-        department: user.department || '',
-        role: user.role,
-      });
+    if (!isOpen) {
       return;
     }
 
-    setFormData(emptyForm);
-  }, [user, isOpen]);
+    fetch('/api/user-roles')
+      .then((response) => response.json())
+      .then((data) => {
+        if (!Array.isArray(data)) {
+          return;
+        }
+
+        const options = data.filter(
+          (item): item is UserRoleOption => typeof item?.id === 'number' && typeof item?.name === 'string'
+        );
+        setRoles(options);
+        setFormData((current) => ({
+          ...current,
+          role_id: user?.role_id ? String(user.role_id) : current.role_id || String(options[0]?.id || ''),
+        }));
+      })
+      .catch((error) => {
+        console.error('Failed to load user roles:', error);
+      });
+
+    setFormData({
+      fullname: user?.fullname || '',
+      username: user?.username || '',
+      password: '',
+      department: user?.department || '',
+      role_id: user?.role_id ? String(user.role_id) : '',
+    });
+  }, [isOpen, user]);
 
   if (!isOpen) return null;
 
@@ -55,7 +78,10 @@ export default function UserFormModal({ isOpen, onClose, user }: UserFormModalPr
       const response = await fetch(user ? `/api/users/${user.id}` : '/api/users', {
         method: user ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          role_id: Number(formData.role_id),
+        }),
       });
 
       if (response.ok) {
@@ -76,55 +102,57 @@ export default function UserFormModal({ isOpen, onClose, user }: UserFormModalPr
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
-        <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+      <div className="absolute inset-0 animate-in fade-in bg-slate-950/40 backdrop-blur-sm duration-300" onClick={onClose} />
+      <div className="relative w-full max-w-lg overflow-hidden rounded-[2.5rem] border border-slate-100 bg-white shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+        <div className="flex items-center justify-between border-b border-slate-50 bg-slate-50/50 p-8">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
-              {user ? <Save className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-200">
+              {user ? <Save className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
             </div>
             <div>
-              <h3 className="text-xl font-black text-slate-900 tracking-tight">{user ? 'แก้ไขข้อมูลผู้ใช้' : 'เพิ่มผู้ใช้งานใหม่'}</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{user ? `@${user.username}` : 'Create user'}</p>
+              <h3 className="text-xl font-black tracking-tight text-slate-900">{user ? 'แก้ไขข้อมูลผู้ใช้' : 'เพิ่มผู้ใช้งานใหม่'}</h3>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{user ? `@${user.username}` : 'Create user'}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-xl transition-all shadow-sm">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="rounded-xl p-2 text-slate-400 shadow-sm transition-all hover:bg-white hover:text-slate-900">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-6 p-8">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">ชื่อ-นามสกุล</label>
-              <input required type="text" value={formData.fullname} onChange={(e) => setFormData({ ...formData, fullname: e.target.value })} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-600 transition-all font-bold text-slate-700" />
+              <label className="ml-1 text-[11px] font-black uppercase tracking-widest text-slate-400">ชื่อ-นามสกุล</label>
+              <input required type="text" value={formData.fullname} onChange={(e) => setFormData({ ...formData, fullname: e.target.value })} className="w-full rounded-xl border-none bg-slate-50 px-5 py-3.5 font-bold text-slate-700 transition-all focus:ring-2 focus:ring-emerald-600" />
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">Username</label>
-              <input required type="text" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-600 transition-all font-bold text-slate-700" />
+              <label className="ml-1 text-[11px] font-black uppercase tracking-widest text-slate-400">Username</label>
+              <input required type="text" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} className="w-full rounded-xl border-none bg-slate-50 px-5 py-3.5 font-bold text-slate-700 transition-all focus:ring-2 focus:ring-emerald-600" />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">{user ? 'รหัสผ่านใหม่' : 'รหัสผ่าน'}</label>
-              <input type="password" required={!user} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder={user ? 'เว้นว่างหากไม่เปลี่ยน' : ''} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-600 transition-all font-bold text-slate-700" />
+              <label className="ml-1 text-[11px] font-black uppercase tracking-widest text-slate-400">{user ? 'รหัสผ่านใหม่' : 'รหัสผ่าน'}</label>
+              <input type="password" required={!user} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder={user ? 'เว้นว่างหากไม่เปลี่ยน' : ''} className="w-full rounded-xl border-none bg-slate-50 px-5 py-3.5 font-bold text-slate-700 transition-all focus:ring-2 focus:ring-emerald-600" />
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">แผนก / ฝ่าย</label>
-              <input type="text" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-600 transition-all font-bold text-slate-700" />
+              <label className="ml-1 text-[11px] font-black uppercase tracking-widest text-slate-400">แผนก / ฝ่าย</label>
+              <input type="text" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} className="w-full rounded-xl border-none bg-slate-50 px-5 py-3.5 font-bold text-slate-700 transition-all focus:ring-2 focus:ring-emerald-600" />
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">ระดับสิทธิ์</label>
-            <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'user' })} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-600 transition-all font-bold text-slate-700 cursor-pointer">
-              <option value="user">ผู้ใช้งาน</option>
-              <option value="admin">ผู้ดูแลระบบ</option>
+            <label className="ml-1 text-[11px] font-black uppercase tracking-widest text-slate-400">ระดับสิทธิ์</label>
+            <select required value={formData.role_id} onChange={(e) => setFormData({ ...formData, role_id: e.target.value })} className="w-full cursor-pointer rounded-xl border-none bg-slate-50 px-5 py-3.5 font-bold text-slate-700 transition-all focus:ring-2 focus:ring-emerald-600">
+              <option value="">เลือกระดับสิทธิ์</option>
+              {roles.map((item) => (
+                <option key={item.id} value={item.id}>{item.name}</option>
+              ))}
             </select>
           </div>
-          <div className="flex gap-4 items-center pt-4">
-            <button type="button" onClick={onClose} className="flex-1 px-8 py-4 text-sm font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors">ยกเลิก</button>
-            <button type="submit" disabled={loading} className="flex-[2] bg-slate-900 text-white px-10 py-4 rounded-2xl font-black text-sm shadow-2xl flex items-center justify-center disabled:opacity-50 hover:scale-[1.02] active:scale-95 transition-all">
-              {loading ? <Loader2 className="w-5 h-5 mr-3 animate-spin" /> : user ? <Save className="w-5 h-5 mr-3" /> : <UserPlus className="w-5 h-5 mr-3" />}
+          <div className="flex items-center gap-4 pt-4">
+            <button type="button" onClick={onClose} className="flex-1 px-8 py-4 text-sm font-black uppercase tracking-widest text-slate-400 transition-colors hover:text-slate-900">ยกเลิก</button>
+            <button type="submit" disabled={loading} className="flex flex-[2] items-center justify-center rounded-2xl bg-slate-900 px-10 py-4 text-sm font-black text-white shadow-2xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50">
+              {loading ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : user ? <Save className="mr-3 h-5 w-5" /> : <UserPlus className="mr-3 h-5 w-5" />}
               {user ? 'บันทึกการแก้ไข' : 'เพิ่มผู้ใช้'}
             </button>
           </div>

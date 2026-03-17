@@ -1,17 +1,24 @@
 import { NextResponse } from 'next/server';
 import { queryWithEncoding } from '@/lib/db';
+import { ensureMasterDataSchema, getDefaultDriverTypeId } from '@/lib/master-data';
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { fullname, is_active, note, driver_type_code } = await request.json();
+    await ensureMasterDataSchema();
+    const { fullname, is_active, note, driver_type_id } = await request.json();
     const { id } = await params;
+    const normalizedDriverTypeId = Number(driver_type_id) || await getDefaultDriverTypeId();
+
+    if (!fullname || !normalizedDriverTypeId) {
+      return NextResponse.json({ error: 'Fullname and driver type are required' }, { status: 400 });
+    }
 
     await queryWithEncoding(
-      'UPDATE drivers SET fullname = $1, driver_type_code = $2, is_active = $3, note = $4, updated_by = $5 WHERE id = $6',
-      [fullname, driver_type_code || '01', is_active, note, 'admin', id]
+      'UPDATE drivers SET fullname = $1, driver_type_id = $2, is_active = $3, note = $4, updated_by = $5 WHERE id = $6',
+      [fullname, normalizedDriverTypeId, is_active, note, 'admin', id]
     );
 
     return NextResponse.json({ message: 'Driver updated successfully' });

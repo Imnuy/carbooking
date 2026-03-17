@@ -92,8 +92,8 @@ export default function RootLayout({
         />
 
         <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out">
-          <header className="hidden lg:flex h-[74px] bg-[#ddf7e2]/95 border-b border-[#9ee0ae] items-center justify-between px-6 sticky top-0 z-30 backdrop-blur">
-            <div className="flex items-center space-x-4">
+          <header className="hidden lg:flex h-[60px] bg-[#ddf7e2]/95 border-b border-[#9ee0ae] items-center justify-between px-5 sticky top-0 z-30 backdrop-blur">
+            <div className="flex items-center space-x-3">
               <button
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                 className="p-2 text-[#1f6b3b] hover:bg-white/70 rounded-xl transition-colors border border-transparent hover:border-[#b7e8c0]"
@@ -102,15 +102,15 @@ export default function RootLayout({
                 {isSidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
               </button>
               <div className="flex items-center">
-                <span className="text-xl tracking-tight text-[#196334] font-black">{currentTitle}</span>
+                <span className="text-lg tracking-tight text-[#196334] font-black">{currentTitle}</span>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div id="header-extra-actions" className="flex items-center gap-2" />
+            <div className="flex items-center gap-1">
+              <div id="header-extra-actions" className="flex items-center gap-1" />
               {headerAction && (
                 <Link
                   href={headerAction.href}
-                  className={`inline-flex items-center rounded-xl px-4 py-2 text-sm font-bold shadow-sm transition-all ${headerAction.className}`}
+                  className={`inline-flex items-center rounded-xl px-3 py-1.5 text-sm font-bold shadow-sm transition-all ${headerAction.className}`}
                 >
                   <headerAction.icon className="mr-2 h-4 w-4" />
                   {headerAction.label}
@@ -119,16 +119,16 @@ export default function RootLayout({
             </div>
           </header>
 
-          <header className="lg:hidden h-16 bg-[#ddf7e2]/95 border-b border-[#9ee0ae] flex items-center justify-between px-4 sticky top-0 z-30 backdrop-blur">
-            <div className="flex items-center space-x-3">
-              <span className="text-lg tracking-tight text-[#196334] font-black">{currentTitle}</span>
+          <header className="lg:hidden h-14 bg-[#ddf7e2]/95 border-b border-[#9ee0ae] flex items-center justify-between px-3 sticky top-0 z-30 backdrop-blur">
+            <div className="flex items-center space-x-2">
+              <span className="text-base tracking-tight text-[#196334] font-black">{currentTitle}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div id="header-extra-actions-mobile" className="flex items-center gap-2" />
+            <div className="flex items-center gap-1">
+              <div id="header-extra-actions-mobile" className="flex items-center gap-1" />
               {headerAction && (
                 <Link
                   href={headerAction.href}
-                  className={`inline-flex items-center rounded-lg px-3 py-2 text-xs font-bold shadow-sm transition-all ${headerAction.className}`}
+                  className={`inline-flex items-center rounded-lg px-2.5 py-1.5 text-xs font-bold shadow-sm transition-all ${headerAction.className}`}
                 >
                   <headerAction.icon className="h-4 w-4 sm:mr-1.5" />
                   <span className="hidden sm:inline">{headerAction.mobileLabel}</span>

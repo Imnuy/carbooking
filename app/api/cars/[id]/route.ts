@@ -13,7 +13,6 @@ export async function PATCH(
     const resolvedCarTypeId = await resolveCarTypeId({
       car_type_id: typeof car_type_id === 'number' ? car_type_id : Number(car_type_id),
       car_type,
-      model,
     });
 
     await queryWithEncoding(
@@ -23,7 +22,7 @@ export async function PATCH(
            license_plate = $3,
            seats = $4,
            car_type_id = $5,
-           car_type = (SELECT car_type FROM car_type WHERE id = $5),
+           car_type = (SELECT name FROM car_type WHERE id = $5),
            car_number = $6,
            is_active = $7
        WHERE id = $8`,

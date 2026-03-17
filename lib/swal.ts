@@ -2,12 +2,12 @@ import Swal from 'sweetalert2';
 
 export const swalBase = {
   confirmButtonColor: '#23b35b',
-  cancelButtonColor: '#e2e8f0',
-  reverseButtons: true,
+  cancelButtonColor: '#f87171',
+  reverseButtons: false,
   customClass: {
     popup: 'rounded-[2rem]',
-    confirmButton: 'rounded-xl font-bold',
-    cancelButton: 'rounded-xl font-bold text-slate-700',
+    confirmButton: 'rounded-xl font-bold w-32',
+    cancelButton: 'rounded-xl font-bold text-slate-700 w-32',
   },
 };
 
@@ -18,8 +18,8 @@ export async function confirmDelete(title: string, text: string) {
     title,
     text,
     showCancelButton: true,
-    confirmButtonText: 'ลบข้อมูล',
-    cancelButtonText: 'ยกเลิก',
+    confirmButtonText: 'ยืนยัน',
+    cancelButtonText: 'ปิด',
   });
 
   return result.isConfirmed;

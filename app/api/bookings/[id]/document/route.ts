@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { BOOKING_STATUS } from '@/lib/booking-flow';
 import {
   getBookingPrintData,
   renderBookingPrintError,
@@ -19,14 +18,12 @@ export async function GET(
         renderBookingPrintError('Booking not found', 'ไม่พบข้อมูลใบขอใช้รถ'),
         {
           status: 404,
-          headers: {
-            'Content-Type': 'text/html; charset=utf-8',
-          },
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
         }
       );
     }
 
-    if (booking.status_code !== BOOKING_STATUS.assigned) {
+    if (!booking.isAssigned) {
       return new NextResponse(
         renderBookingPrintError(
           'Booking not ready',
@@ -34,17 +31,13 @@ export async function GET(
         ),
         {
           status: 400,
-          headers: {
-            'Content-Type': 'text/html; charset=utf-8',
-          },
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
         }
       );
     }
 
     return new NextResponse(renderBookingPrintHtml(booking), {
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-      },
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
     });
   } catch (error) {
     console.error('Error rendering booking document:', error);
@@ -52,9 +45,7 @@ export async function GET(
       renderBookingPrintError('Render failed', 'ไม่สามารถสร้างเอกสารสำหรับพิมพ์ได้'),
       {
         status: 500,
-        headers: {
-          'Content-Type': 'text/html; charset=utf-8',
-        },
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
       }
     );
   }

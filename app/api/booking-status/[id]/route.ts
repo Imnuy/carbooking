@@ -6,15 +6,20 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { code, status, description } = await request.json();
+    const body = await request.json();
+    const name = typeof body?.name === 'string' ? body.name.trim() : (typeof body?.status === 'string' ? body.status.trim() : '');
     const { id } = await params;
 
+    if (!name) {
+      return NextResponse.json({ error: 'Status name is required' }, { status: 400 });
+    }
+
     await queryWithEncoding(
-      'UPDATE booking_status SET code = $1, status = $2, description = $3, updated_by = $4 WHERE id = $5',
-      [code, status, description, 'admin', id]
+      'UPDATE booking_status SET name = $1, is_active = COALESCE($2, is_active) WHERE id = $3',
+      [name, body?.is_active, id]
     );
 
-    return NextResponse.json({ message: 'Booking status updated successfully' });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error updating booking status:', error);
     return NextResponse.json({ error: 'Failed to update booking status' }, { status: 500 });
@@ -22,13 +27,13 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
     await queryWithEncoding('DELETE FROM booking_status WHERE id = $1', [id]);
-    return NextResponse.json({ message: 'Booking status deleted successfully' });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting booking status:', error);
     return NextResponse.json({ error: 'Failed to delete booking status' }, { status: 500 });
