@@ -14,6 +14,7 @@ interface CarActionsProps {
     license_plate: string;
     car_number?: string | null;
     seats?: number | null;
+    car_type_id?: number | null;
     car_type?: string | null;
     is_active: boolean;
   };

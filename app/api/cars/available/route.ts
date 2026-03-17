@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
-import pool, { queryWithEncoding } from '@/lib/db';
+import { queryWithEncoding } from '@/lib/db';
+import { ensureCarTypeSchema } from '@/lib/car-type';
 
 export async function GET() {
   try {
+    await ensureCarTypeSchema();
     const rows = await queryWithEncoding(
-      "SELECT id, brand, model, license_plate, car_type FROM cars WHERE is_active = true"
+      `SELECT c.id, c.brand, c.model, c.license_plate, c.car_type_id, ct.car_type
+       FROM cars c
+       LEFT JOIN car_type ct ON c.car_type_id = ct.id
+       WHERE c.is_active = true
+       ORDER BY c.id DESC`
     );
     return NextResponse.json(rows);
   } catch (error) {

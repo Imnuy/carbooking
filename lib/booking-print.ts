@@ -1,6 +1,7 @@
 import { queryWithEncoding } from '@/lib/db';
 import { isTripType, TripType } from '@/lib/booking-flow';
 import { ensureTripsSchema, resolveBookingStatusColumn } from '@/lib/booking-trip';
+import { ensureCarTypeSchema } from '@/lib/car-type';
 
 export interface BookingPrintData {
   id: number;
@@ -535,6 +536,7 @@ function shell(title: string, body: string) {
 
 export async function getBookingPrintData(id: string | number) {
   await ensureTripsSchema();
+  await ensureCarTypeSchema();
   const statusColumn = await resolveBookingStatusColumn();
   const rows = (await queryWithEncoding(
     `SELECT
@@ -557,10 +559,11 @@ export async function getBookingPrintData(id: string | number) {
         c.brand,
         c.model,
         c.license_plate,
-        c.car_type
+        ct.car_type AS car_type
      FROM bookings b
      LEFT JOIN trips t ON b.trip_id = t.id
      LEFT JOIN cars c ON COALESCE(t.car_id, b.car_id) = c.id
+     LEFT JOIN car_type ct ON c.car_type_id = ct.id
      LEFT JOIN drivers d ON COALESCE(t.driver_id, b.driver_id) = d.id
      WHERE b.id = $1
      LIMIT 1`,

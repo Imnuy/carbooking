@@ -1,34 +1,38 @@
 import { NextResponse } from 'next/server';
 import { queryWithEncoding } from '@/lib/db';
-
-let carSchemaReady = false;
-
-async function ensureCarNumberColumn() {
-  if (carSchemaReady) {
-    return;
-  }
-
-  await queryWithEncoding('ALTER TABLE cars ADD COLUMN IF NOT EXISTS car_number VARCHAR(50)');
-  carSchemaReady = true;
-}
+import { ensureCarTypeSchema, resolveCarTypeId } from '@/lib/car-type';
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await ensureCarNumberColumn();
-    const { brand, model, license_plate, seats, car_type, car_number, is_active } = await request.json();
+    await ensureCarTypeSchema();
+    const { brand, model, license_plate, seats, car_type_id, car_type, car_number, is_active } = await request.json();
     const { id } = await params;
+    const resolvedCarTypeId = await resolveCarTypeId({
+      car_type_id: typeof car_type_id === 'number' ? car_type_id : Number(car_type_id),
+      car_type,
+      model,
+    });
 
     await queryWithEncoding(
-      'UPDATE cars SET brand = $1, model = $2, license_plate = $3, seats = $4, car_type = $5, car_number = $6, is_active = $7 WHERE id = $8',
+      `UPDATE cars
+       SET brand = $1,
+           model = $2,
+           license_plate = $3,
+           seats = $4,
+           car_type_id = $5,
+           car_type = (SELECT car_type FROM car_type WHERE id = $5),
+           car_number = $6,
+           is_active = $7
+       WHERE id = $8`,
       [
         brand,
         model,
         license_plate,
         seats,
-        car_type,
+        resolvedCarTypeId,
         car_number || null,
         is_active !== undefined ? is_active : true,
         id,

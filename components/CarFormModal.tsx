@@ -5,6 +5,11 @@ import { Car, Loader2, Save, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { showError, showSuccess } from '@/lib/swal';
 
+interface CarTypeOption {
+  id: number;
+  car_type: string;
+}
+
 interface CarFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -15,6 +20,7 @@ interface CarFormModalProps {
     license_plate: string;
     car_number?: string | null;
     seats?: number | null;
+    car_type_id?: number | null;
     car_type?: string | null;
     is_active: boolean;
   } | null;
@@ -26,16 +32,22 @@ const emptyForm = {
   license_plate: '',
   car_number: '',
   seats: 0,
-  car_type: 'รถตู้นั่งบรรทุก',
+  car_type_id: '',
   is_active: true,
 };
 
 export default function CarFormModal({ isOpen, onClose, car }: CarFormModalProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [fetchingCarTypes, setFetchingCarTypes] = useState(false);
+  const [carTypes, setCarTypes] = useState<CarTypeOption[]>([]);
   const [formData, setFormData] = useState(emptyForm);
 
   useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
     if (car) {
       setFormData({
         brand: car.brand,
@@ -43,13 +55,28 @@ export default function CarFormModal({ isOpen, onClose, car }: CarFormModalProps
         license_plate: car.license_plate,
         car_number: car.car_number || '',
         seats: car.seats ?? 0,
-        car_type: car.car_type || 'รถตู้นั่งบรรทุก',
+        car_type_id: car.car_type_id ? String(car.car_type_id) : '',
         is_active: car.is_active,
       });
-      return;
+    } else {
+      setFormData(emptyForm);
     }
 
-    setFormData(emptyForm);
+    setFetchingCarTypes(true);
+    fetch('/api/car-types')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setCarTypes(data);
+          if (!car && data[0]?.id) {
+            setFormData((current) => ({ ...current, car_type_id: String(data[0].id) }));
+          }
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+      })
+      .finally(() => setFetchingCarTypes(false));
   }, [car, isOpen]);
 
   if (!isOpen) return null;
@@ -59,10 +86,15 @@ export default function CarFormModal({ isOpen, onClose, car }: CarFormModalProps
     setLoading(true);
 
     try {
+      const selectedCarType = carTypes.find((item) => String(item.id) === formData.car_type_id);
       const response = await fetch(car ? `/api/cars/${car.id}` : '/api/cars', {
         method: car ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          car_type_id: formData.car_type_id ? Number(formData.car_type_id) : null,
+          car_type: selectedCarType?.car_type || null,
+        }),
       });
 
       if (response.ok) {
@@ -128,11 +160,13 @@ export default function CarFormModal({ isOpen, onClose, car }: CarFormModalProps
             </div>
             <div className="space-y-2">
               <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">ประเภทรถ</label>
-              <select value={formData.car_type} onChange={(e) => setFormData({ ...formData, car_type: e.target.value })} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-900 transition-all font-bold text-slate-700 cursor-pointer">
-                <option value="รถตู้นั่งบรรทุก">รถตู้นั่งบรรทุก</option>
-                <option value="รถยนต์บรรทุก">รถยนต์บรรทุก</option>
-                <option value="รถยนต์นั่งบรรทุก4ประตู">รถยนต์นั่งบรรทุก4ประตู</option>
+              <select required value={formData.car_type_id} onChange={(e) => setFormData({ ...formData, car_type_id: e.target.value })} className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-slate-900 transition-all font-bold text-slate-700 cursor-pointer">
+                <option value="">เลือกประเภทรถ</option>
+                {carTypes.map((item) => (
+                  <option key={item.id} value={item.id}>{item.car_type}</option>
+                ))}
               </select>
+              {fetchingCarTypes && <p className="text-xs text-slate-400">กำลังดึงข้อมูลประเภทรถ...</p>}
             </div>
             <div className="space-y-2">
               <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">สถานะ</label>
