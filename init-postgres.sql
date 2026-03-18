@@ -33,10 +33,10 @@ CREATE TABLE IF NOT EXISTS cars (
 -- Bookings table
 CREATE TABLE IF NOT EXISTS bookings (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id),
+    user_id INTEGER,
     requester_name VARCHAR(255),
     requester_position VARCHAR(255),
-    car_id INTEGER REFERENCES cars(id),
+    car_id INTEGER,
     driver_name VARCHAR(150),
     supervisor_name VARCHAR(255),
     supervisor_position VARCHAR(255),

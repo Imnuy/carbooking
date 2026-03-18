@@ -21,6 +21,15 @@ interface MasterOption {
   name: string;
 }
 
+function toLocalDateTimeValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 export default function AddBookingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -41,15 +50,13 @@ export default function AddBookingPage() {
     trip_type_id: '',
     start_time: (() => {
       const d = new Date();
-      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
       d.setHours(8, 30, 0, 0);
-      return d.toISOString().slice(0, 16);
+      return toLocalDateTimeValue(d);
     })(),
     end_time: (() => {
       const d = new Date();
-      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
       d.setHours(16, 30, 0, 0);
-      return d.toISOString().slice(0, 16);
+      return toLocalDateTimeValue(d);
     })(),
   });
 
@@ -72,13 +79,20 @@ export default function AddBookingPage() {
     };
 
     fetchMaster('/api/departments', setDepartments);
-    fetchMaster('/api/trip-types', setTripTypes, 'trip_type_id');
+    fetchMaster('/api/trip-types', setTripTypes);
     fetchMaster('/api/fuel-reimbursements', setFuelOptions, 'fuel_reimbursement_id');
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Validate trip type selection
+    if (!formData.trip_type_id) {
+      alert('กรุณาเลือกประเภทการเดินทาง');
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/bookings', {
@@ -122,7 +136,7 @@ export default function AddBookingPage() {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
             <div className="space-y-2 md:col-span-2">
               <label className="ml-1 flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">
-                <Building2 className="mr-1 h-3 w-3" /> หน่วยงาน / แผนก
+                <Building2 className="mr-1 h-3 w-3" /> แผนก/กลุ่มงาน
               </label>
               <select
                 required
@@ -130,7 +144,7 @@ export default function AddBookingPage() {
                 onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
                 className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
               >
-                <option value="">เลือกหน่วยงาน</option>
+                <option value="">---เลือก---</option>
                 {departments.map((department) => (
                   <option key={department.id} value={department.id}>{department.name}</option>
                 ))}
@@ -195,7 +209,7 @@ export default function AddBookingPage() {
             <h2 className="text-lg font-black text-slate-800 md:text-xl">รายละเอียดการเดินทาง</h2>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-6 md:gap-8">
             <div className="space-y-4 md:col-span-2">
               <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">ประเภทการเดินทาง</label>
               <div className="grid grid-cols-2 gap-3 md:gap-4">
@@ -210,6 +224,7 @@ export default function AddBookingPage() {
                         ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
                         : 'border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-200'
                     )}
+                    required
                   >
                     <span>{index + 1}. {item.name}</span>
                     {formData.trip_type_id === String(item.id) && <Check className="h-4 w-4" />}
@@ -217,8 +232,8 @@ export default function AddBookingPage() {
                 ))}
               </div>
             </div>
-            <div className="space-y-2 md:col-span-2">
-              <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">สถานที่/เส้นทาง</label>
+            <div className="space-y-2 md:col-span-6">
+              <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">สถานที่ไป</label>
               <input
                 required
                 type="text"
@@ -227,7 +242,7 @@ export default function AddBookingPage() {
                 className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
               />
             </div>
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2 md:col-span-6">
               <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">วัตถุประสงค์การเดินทาง</label>
               <textarea
                 required
@@ -237,8 +252,8 @@ export default function AddBookingPage() {
                 className="w-full resize-none rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
               />
             </div>
-            <div className="space-y-2">
-              <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">บริการเบิกค่าน้ำมัน</label>
+            <div className="space-y-2 md:col-span-2">
+              <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">เบิกค่าเชื้อเพลิงจาก</label>
               <select
                 required
                 value={formData.fuel_reimbursement_id}
@@ -251,7 +266,7 @@ export default function AddBookingPage() {
                 ))}
               </select>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">ระยะทางประมาณ (กม.)</label>
               <input
                 required
@@ -262,7 +277,7 @@ export default function AddBookingPage() {
                 className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <label className="ml-1 flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">
                 <Users className="mr-1 h-3 w-3" /> จำนวนผู้โดยสาร
               </label>
@@ -276,7 +291,7 @@ export default function AddBookingPage() {
                 className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-3">
               <label className="ml-1 flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">
                 <Calendar className="mr-1 h-3 w-3" /> วันเดินทางไป
               </label>
@@ -288,7 +303,7 @@ export default function AddBookingPage() {
                 className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-3">
               <label className="ml-1 flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">
                 <Calendar className="mr-1 h-3 w-3" /> วันเดินทางกลับ
               </label>

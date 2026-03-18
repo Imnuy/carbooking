@@ -7,7 +7,6 @@ import {
   Users,
   Car,
   Calendar,
-  Search,
   UserCheck,
   Route,
   UserRound,
@@ -25,6 +24,7 @@ import type { BookingStatusIds } from '@/lib/booking-flow';
 
 interface BookingListClientProps {
   initialBookings: BookingItem[];
+  departments: Array<{ id: number; name: string }>;
   sort: string;
   order: string;
   statusIds: BookingStatusIds;
@@ -35,6 +35,7 @@ interface BookingItem {
   trip_id?: number | null;
   requester_name: string;
   requester_position?: string;
+  department_name?: string | null;
   destination: string;
   distance?: number | string | null;
   purpose?: string | null;
@@ -49,6 +50,7 @@ interface BookingItem {
   status_id?: number | null;
   status_text?: string | null;
   trip_type_id?: number | null;
+  trip_type_name?: string | null;
   end_time?: string | null;
   trip_start_date_time?: string | null;
 }
@@ -63,6 +65,10 @@ const bookingTabs: Array<{ key: BookingTab; label: string; icon: typeof List }> 
   { key: 'cancelled', label: 'ยกเลิก', icon: Ban },
 ];
 
+function isBookingTab(value: string | null): value is BookingTab {
+  return value === 'all' || value === 'pending' || value === 'assigned' || value === 'travelled' || value === 'cancelled';
+}
+
 function getStatusBadgeClass(statusId: number | null | undefined, statusIds: BookingStatusIds) {
   if (statusId === statusIds.pending) return 'bg-amber-100 text-amber-700';
   if (statusId === statusIds.assigned) return 'bg-emerald-100 text-emerald-700';
@@ -72,16 +78,30 @@ function getStatusBadgeClass(statusId: number | null | undefined, statusIds: Boo
   return 'bg-slate-100 text-slate-700';
 }
 
-export default function BookingListClient({ initialBookings, sort, order, statusIds }: BookingListClientProps) {
+function getTripTypeBadgeClass(tripTypeName: string | null | undefined) {
+  if (tripTypeName === 'ภายในจังหวัด') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (tripTypeName === 'ต่างจังหวัด') return 'border-violet-200 bg-violet-50 text-violet-700';
+  return 'border-sky-200 bg-sky-50 text-sky-700';
+}
+
+export default function BookingListClient({ initialBookings, departments, sort, order, statusIds }: BookingListClientProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<BookingTab>('all');
-  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') ?? '');
+  const [activeTab, setActiveTab] = useState<BookingTab>(() => {
+    const tabParam = searchParams.get('tab');
+    return isBookingTab(tabParam) ? tabParam : 'all';
+  });
+  const [departmentFilter, setDepartmentFilter] = useState(searchParams.get('department') ?? '');
   const [travelDateFilter, setTravelDateFilter] = useState(searchParams.get('date') ?? '');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeBooking, setActiveBooking] = useState<BookingItem | null>(null);
+
+  const departmentOptions = useMemo(
+    () => departments.map((department) => department.name),
+    [departments]
+  );
 
   const getBookingDateKey = (startTime: string) => {
     const date = new Date(startTime);
@@ -116,24 +136,29 @@ export default function BookingListClient({ initialBookings, sort, order, status
       case 'cancelled':
         return isCancelled;
       default:
-        return true;
+        return !isTravelled;
     }
   };
 
-  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
-
   useEffect(() => {
-    setSearchTerm(searchParams.get('search') ?? '');
+    const tabParam = searchParams.get('tab');
+    setActiveTab(isBookingTab(tabParam) ? tabParam : 'all');
+    setDepartmentFilter(searchParams.get('department') ?? '');
     setTravelDateFilter(searchParams.get('date') ?? '');
   }, [searchParams]);
 
   const createFilterQueryString = useMemo(
-    () => (nextSearch: string, nextDate: string) => {
+    () => (nextDepartment: string, nextDate: string, nextTab: BookingTab) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (nextSearch.trim()) {
-        params.set('search', nextSearch.trim());
+      if (nextTab !== 'all') {
+        params.set('tab', nextTab);
       } else {
-        params.delete('search');
+        params.delete('tab');
+      }
+      if (nextDepartment.trim()) {
+        params.set('department', nextDepartment.trim());
+      } else {
+        params.delete('department');
       }
       if (nextDate) {
         params.set('date', nextDate);
@@ -145,25 +170,20 @@ export default function BookingListClient({ initialBookings, sort, order, status
     [searchParams]
   );
 
-  const updateFilters = (nextSearch: string, nextDate: string) => {
-    setSearchTerm(nextSearch);
+  const updateFilters = (nextDepartment: string, nextDate: string, nextTab: BookingTab = activeTab) => {
+    setDepartmentFilter(nextDepartment);
     setTravelDateFilter(nextDate);
+    setActiveTab(nextTab);
     setSelectedIds([]);
-    const queryString = createFilterQueryString(nextSearch, nextDate);
+    const queryString = createFilterQueryString(nextDepartment, nextDate, nextTab);
     router.replace(queryString ? `${pathname}?${queryString}` : pathname);
   };
 
   const filteredBookings = initialBookings.filter((booking) => {
     if (!matchesTab(booking)) return false;
     if (travelDateFilter && getBookingDateKey(booking.start_time) !== travelDateFilter) return false;
-    if (!normalizedSearchTerm) return true;
-    const searchableValues = [
-      booking.requester_name,
-      booking.requester_position,
-    ];
-    return searchableValues.some(
-      (value) => typeof value === 'string' && value.toLowerCase().includes(normalizedSearchTerm)
-    );
+    if (departmentFilter && booking.department_name !== departmentFilter) return false;
+    return true;
   });
 
   const pendingBookings = filteredBookings.filter((booking) => booking.status_id === statusIds.pending);
@@ -286,8 +306,7 @@ export default function BookingListClient({ initialBookings, sort, order, status
                   key={tab.key}
                   type="button"
                   onClick={() => {
-                    setActiveTab(tab.key);
-                    setSelectedIds([]);
+                    updateFilters('', '', tab.key);
                   }}
                   className={cn(
                     'relative inline-flex items-center gap-1.5 whitespace-nowrap pb-2 text-sm font-bold uppercase tracking-widest transition-all',
@@ -302,17 +321,19 @@ export default function BookingListClient({ initialBookings, sort, order, status
             })}
           </div>
           <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
-            <div className="relative w-full max-w-xs">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6ca77b]" />
-              <input
-                type="text"
-                value={searchTerm}
+            <div className="w-full max-w-xs">
+              <select
+                value={departmentFilter}
                 onChange={(event) => {
                   updateFilters(event.target.value, travelDateFilter);
                 }}
-                placeholder="ค้นหาตามชื่อผู้ขอ..."
-                className="w-full rounded-xl border border-[#cbe7d1] bg-white py-3 pl-12 pr-4 text-sm shadow-none transition-all focus:border-[#9ee0ae] focus:ring-2 focus:ring-[#9ee0ae]"
-              />
+                className="w-full rounded-xl border border-[#cbe7d1] bg-white px-4 py-3 text-sm shadow-none transition-all focus:border-[#9ee0ae] focus:ring-2 focus:ring-[#9ee0ae]"
+              >
+                <option value="">ทุกกลุ่มงาน</option>
+                {departmentOptions.map((department) => (
+                  <option key={department} value={department}>{department}</option>
+                ))}
+              </select>
             </div>
             <div className="relative w-full md:w-[190px]">
               <Calendar className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6ca77b]" />
@@ -320,7 +341,7 @@ export default function BookingListClient({ initialBookings, sort, order, status
                 type="date"
                 value={travelDateFilter}
                 onChange={(event) => {
-                  updateFilters(searchTerm, event.target.value);
+                  updateFilters(departmentFilter, event.target.value);
                 }}
                 className="w-full rounded-xl border border-[#cbe7d1] bg-white py-3 pl-12 pr-4 text-sm shadow-none transition-all focus:border-[#9ee0ae] focus:ring-2 focus:ring-[#9ee0ae]"
               />
@@ -336,11 +357,11 @@ export default function BookingListClient({ initialBookings, sort, order, status
         </div>
 
         {/* Desktop table */}
-        <div className="hidden overflow-x-auto lg:block">
-          <table className="min-w-full">
+        <div className="hidden lg:block">
+          <table className="min-w-full table-fixed">
             <thead>
               <tr className="bg-[#f7fbf7]">
-                <th className="w-12 px-8 py-5 text-left">
+                <th className="w-10 px-3 py-4 text-left">
                   <input
                     type="checkbox"
                     checked={selectedIds.length > 0 && selectedIds.every((id) => {
@@ -353,36 +374,41 @@ export default function BookingListClient({ initialBookings, sort, order, status
                     className="h-4 w-4 cursor-pointer rounded border-[#b9e1c2] text-[#23b35b] focus:ring-[#23b35b]"
                   />
                 </th>
-                <th className="w-16 px-4 py-4 text-left text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">
+                <th className="w-12 px-3 py-4 text-left text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">
                   <SortButton column="id" label="#" currentSort={sort} currentOrder={order} />
                 </th>
-                <th className="px-8 py-4 text-left text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">
+                <th className="w-28 px-3 py-4 text-left text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">
                   <span className="inline-flex items-center gap-1.5">
                     <Calendar className="h-3.5 w-3.5" />
                     <SortButton column="start_time" label="วันเดินทาง" currentSort={sort} currentOrder={order} />
                   </span>
                 </th>
-                <th className="px-8 py-4 text-left text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">
+                <th className="w-32 px-3 py-4 text-left text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Route className="h-3.5 w-3.5" />
+                    ประเภททริป
+                  </span>
+                </th>
+                <th className="w-40 px-3 py-4 text-left text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">
                   <span className="inline-flex items-center gap-1.5">
                     <UserRound className="h-3.5 w-3.5" />
                     ผู้ขอ
                   </span>
                 </th>
-                <th className="px-8 py-4 text-left text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">
+                <th className="w-[22%] px-3 py-4 text-left text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">
                   <span className="inline-flex items-center gap-1.5">
-                    <Route className="h-3.5 w-3.5" />
+                    <MapPin className="h-3.5 w-3.5" />
                     เส้นทาง / วัตถุประสงค์
                   </span>
                 </th>
-                <th className="px-8 py-4 text-left text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">
+                <th className="w-[18%] px-3 py-4 text-left text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">
                   <span className="inline-flex items-center gap-1.5">
                     <Car className="h-3.5 w-3.5" />
                     รถ / คนขับ
                   </span>
                 </th>
-                <th className="px-8 py-4 text-left text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">สถานะ</th>
-                <th className="px-8 py-4 text-center text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">เอกสาร</th>
-                <th className="px-8 py-4 text-right text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">จัดการ</th>
+                <th className="w-28 px-3 py-4 text-left text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">สถานะ</th>
+                <th className="w-24 px-3 py-4 text-right text-[11px] font-medium uppercase tracking-widest text-[#5f8f6b]">จัดการ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#edf5ef]">
@@ -409,7 +435,7 @@ export default function BookingListClient({ initialBookings, sort, order, status
 
                   return (
                     <tr key={b.id} className={cn('group transition-colors hover:bg-[#f6fbf7]', isSelected && 'bg-[#eefaf0]')}>
-                      <td className="px-8 py-6">
+                      <td className="px-3 py-5 align-top">
                         <input
                           type="checkbox"
                           checked={isSelected}
@@ -418,25 +444,31 @@ export default function BookingListClient({ initialBookings, sort, order, status
                           className="h-4 w-4 cursor-pointer rounded border-[#b9e1c2] text-[#23b35b] focus:ring-[#23b35b]"
                         />
                       </td>
-                      <td className="px-4 py-6">
+                      <td className="px-3 py-5 align-top">
                         <div className="text-xs font-medium text-slate-400">{b.id}</div>
                       </td>
-                      <td className="px-8 py-6 text-nowrap">
+                      <td className="px-3 py-5 align-top">
                         <div className="text-sm font-medium text-slate-800">{new Date(b.start_time).toLocaleDateString('th-TH')}</div>
                         <div className="text-[11px] font-medium text-slate-400">
                           {new Date(b.start_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </td>
-                      <td className="px-8 py-6">
-                        <div className="text-sm font-medium text-slate-900">{displayName}</div>
-                        <div className="text-[10px] font-medium uppercase text-slate-400">{b.requester_position || 'ไม่ระบุตำแหน่ง'}</div>
+                      <td className="px-3 py-5 align-top">
+                        <div className={cn('inline-flex max-w-full items-center rounded-lg border px-3 py-1.5 text-xs font-medium', getTripTypeBadgeClass(b.trip_type_name))}>
+                          <Route className="mr-1.5 h-3.5 w-3.5" />
+                          <span className="truncate">{b.trip_type_name || 'ไม่ระบุ'}</span>
+                        </div>
                       </td>
-                      <td className="max-w-xs px-8 py-6">
+                      <td className="px-3 py-5 align-top">
+                        <div className="truncate text-sm font-medium text-slate-900">{displayName}</div>
+                        <div className="truncate text-[10px] font-medium uppercase text-slate-400">{b.department_name || b.requester_position || 'ไม่ระบุหน่วยงาน'}</div>
+                      </td>
+                      <td className="px-3 py-5 align-top">
                         <div className="mb-1 flex items-center text-sm font-medium text-slate-800">
                           <MapPin className="mr-1.5 h-3.5 w-3.5 text-rose-500" />
-                          <span className="mr-2 truncate">{b.destination}</span>
+                          <span className="mr-2 line-clamp-2 break-words">{b.destination}</span>
                         </div>
-                        <div className="flex items-center space-x-3">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                           <div className="text-[10px] font-medium uppercase text-slate-400">{b.distance} กม.</div>
                           {passengerCount > 0 && (
                             <div className="flex items-center text-[10px] font-medium uppercase text-emerald-600">
@@ -450,13 +482,14 @@ export default function BookingListClient({ initialBookings, sort, order, status
                           </div>
                         )}
                       </td>
-                      <td className="px-8 py-6">
+                      <td className="px-3 py-5 align-top">
                         {b.car_id ? (
-                          <div>
-                            <div className="text-sm font-medium text-slate-800">{b.brand} {b.model}</div>
-                            <div className="text-[11px] font-medium uppercase text-[#2f9c55]">{b.license_plate}</div>
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium text-slate-800">{b.brand} {b.model}</div>
+                            <div className="truncate text-[11px] font-medium uppercase text-[#2f9c55]">{b.license_plate}</div>
                             <div className="mt-1 flex items-center text-[10px] text-slate-400">
-                              <UserCheck className="mr-1 h-3 w-3" /> {b.driver_name || '-'}
+                              <UserCheck className="mr-1 h-3 w-3 shrink-0" />
+                              <span className="truncate">{b.driver_name || '-'}</span>
                             </div>
                             {b.trip_start_date_time && (
                               <div className="mt-1 text-[10px] font-bold uppercase tracking-tight text-slate-500">
@@ -468,21 +501,19 @@ export default function BookingListClient({ initialBookings, sort, order, status
                           <span className="text-[10px] text-slate-300">-</span>
                         )}
                       </td>
-                      <td className="px-8 py-6">
-                        <span className={cn('inline-flex rounded-lg px-2.5 py-1 text-[10px] font-bold', getStatusBadgeClass(b.status_id, statusIds))}>
-                          {b.status_text || 'ไม่ระบุ'}
-                        </span>
+                      <td className="px-3 py-5 align-top">
+                        <div className="flex flex-col items-start gap-2">
+                          <span className={cn('inline-flex rounded-lg px-2.5 py-1 text-[10px] font-bold', getStatusBadgeClass(b.status_id, statusIds))}>
+                            {b.status_text || 'ไม่ระบุ'}
+                          </span>
+                          {b.car_id && (
+                            <div className="inline-flex items-center justify-center">
+                              <ExportBookingDoc booking={b} />
+                            </div>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-8 py-6 text-center">
-                        {b.car_id ? (
-                          <div className="inline-flex items-center justify-center">
-                            <ExportBookingDoc booking={b} />
-                          </div>
-                        ) : (
-                          <span className="text-[10px] text-slate-300">-</span>
-                        )}
-                      </td>
-                      <td className="px-8 py-6 text-right">
+                      <td className="px-3 py-5 text-right align-top">
                         <BookingActions booking={b} view="desktop" statusIds={statusIds} />
                       </td>
                     </tr>
@@ -531,6 +562,13 @@ export default function BookingListClient({ initialBookings, sort, order, status
                     <span className={cn('rounded-md px-3 py-1 text-[9px] font-bold uppercase tracking-widest', getStatusBadgeClass(b.status_id, statusIds))}>
                       {b.status_text || 'ไม่ระบุ'}
                     </span>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <div className={cn('inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-medium', getTripTypeBadgeClass(b.trip_type_name))}>
+                      <Route className="mr-1 h-3 w-3" />
+                      {b.trip_type_name || 'ไม่ระบุ'}
+                    </div>
                   </div>
 
                   <div className="space-y-3 rounded-2xl border border-[#dfeee2] bg-[#f4fbf5] p-4">
