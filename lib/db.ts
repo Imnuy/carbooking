@@ -18,7 +18,7 @@ export async function queryWithEncoding(text: string, params?: unknown[]) {
   try {
     const res = await pool.query(text, params);
     const duration = Date.now() - start;
-    console.log('Executed query', { text, duration, rows: res.rowCount });
+    // console.log('Executed query', { text, duration, rows: res.rowCount });
     return res.rows;
   } catch (error) {
     console.error('Database query error:', { text, error });
