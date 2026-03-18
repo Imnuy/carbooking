@@ -13,11 +13,49 @@ interface BookingRow {
   requester_name?: string;
   destination: string;
   trip_type_id?: number | null;
-  start_time?: string;
+  start_date?: string | Date | null;
+  start_time?: string | Date;
+  end_date?: string | Date | null;
   car_id?: number | null;
   driver_id?: number | null;
   status_id?: number | null;
   status_text?: string | null;
+}
+
+function normalizeDatePart(value?: string | Date | null) {
+  if (!value) return '';
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return '';
+    return value.toISOString().split('T')[0];
+  }
+  const normalizedValue = String(value);
+  return normalizedValue.includes('T') ? normalizedValue.split('T')[0] : normalizedValue;
+}
+
+function normalizeTimePart(value?: string | Date | null) {
+  if (!value) return '';
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return '';
+    return value.toTimeString().slice(0, 5);
+  }
+  const normalizedValue = String(value);
+  return normalizedValue.length >= 5 ? normalizedValue.slice(0, 5) : normalizedValue;
+}
+
+function buildBookingDateTime(date?: string | Date | null, time?: string | Date | null) {
+  const normalizedDate = normalizeDatePart(date);
+  const normalizedTime = normalizeTimePart(time);
+  if (!normalizedDate || !normalizedTime) return null;
+
+  const [year, month, day] = normalizedDate.split('-').map(Number);
+  const [hours, minutes] = normalizedTime.split(':').map(Number);
+
+  if (![year, month, day, hours, minutes].every((item) => Number.isFinite(item))) {
+    return null;
+  }
+
+  const parsed = new Date(year, month - 1, day, hours, minutes, 0, 0);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 interface BookingRowProps {
@@ -36,14 +74,18 @@ export default function BookingActions({ booking, view, statusIds }: BookingRowP
     ...booking,
     requester_name: booking.requester_name || '',
     trip_id: booking.trip_id ?? null,
+    start_date: normalizeDatePart(booking.start_date) || null,
+    start_time: normalizeTimePart(booking.start_time),
+    end_date: normalizeDatePart(booking.end_date) || null,
     car_id: booking.car_id ?? null,
     driver_id: booking.driver_id ?? null,
   };
 
   const handleDelete = async () => {
     const requesterName = booking.requester_name || 'ไม่ระบุผู้ขอ';
-    const travelDate = booking.start_time
-      ? new Date(booking.start_time).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
+    const bookingDateTime = buildBookingDateTime(booking.start_date, booking.start_time);
+    const travelDate = bookingDateTime
+      ? bookingDateTime.toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
       : 'ไม่ระบุวันเดินทาง';
     const destination = booking.destination ? `สถานที่: ${booking.destination}` : 'สถานที่: -';
     const statusLabel = booking.status_text ? `สถานะ: ${booking.status_text}` : 'สถานะ: -';

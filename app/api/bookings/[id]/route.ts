@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { queryWithEncoding } from '@/lib/db';
+import { splitDateTimeLocal } from '@/lib/booking-datetime';
+import { publishBookingRealtime } from '@/lib/booking-realtime';
 import { ensureTripsSchema, toDateKey } from '@/lib/booking-trip';
 import {
   ensureMasterDataSchema,
@@ -12,6 +14,31 @@ import {
   isValidFuelReimbursement,
   isValidTripType,
 } from '@/lib/master-data';
+
+function normalizeDatePart(value?: string | null) {
+  if (!value) return '';
+  const normalizedValue = String(value);
+  return normalizedValue.includes('T') ? normalizedValue.split('T')[0] : normalizedValue;
+}
+
+function normalizeTimePart(value?: string | null) {
+  if (!value) return '';
+  const normalizedValue = String(value);
+  return normalizedValue.length >= 8 ? normalizedValue.slice(0, 8) : normalizedValue.length === 5 ? `${normalizedValue}:00` : normalizedValue;
+}
+
+function buildBookingDateTimeString(date?: string | null, time?: string | null) {
+  const normalizedDate = normalizeDatePart(date);
+  const normalizedTime = normalizeTimePart(time);
+  if (!normalizedDate || !normalizedTime) return null;
+  return `${normalizedDate}T${normalizedTime}`;
+}
+
+function getDateTimeSortValue(dateTime: string | null) {
+  if (!dateTime) return Number.POSITIVE_INFINITY;
+  const parsed = new Date(dateTime);
+  return Number.isNaN(parsed.getTime()) ? Number.POSITIVE_INFINITY : parsed.getTime();
+}
 
 export async function PATCH(
   request: Request,
@@ -53,6 +80,8 @@ export async function PATCH(
       const normalizedDepartmentId = Number(department_id);
       const normalizedStatusId = Number(status_id);
       const statusIds = await getBookingStatusIds();
+      const startDateTime = splitDateTimeLocal(start_time);
+      const endDateTime = splitDateTimeLocal(end_time);
 
       if (!requester_name || !requester_position || !supervisor_name || !supervisor_position) {
         return NextResponse.json({ error: 'Requester and supervisor information is required' }, { status: 400 });
@@ -88,24 +117,28 @@ export async function PATCH(
              purpose = $2,
              fuel_reimbursement_id = $3,
              distance = $4,
-             start_time = $5,
-             end_time = $6,
-             requester_name = $7,
-             requester_position = $8,
-             supervisor_name = $9,
-             supervisor_position = $10,
-             department_id = $11,
-             passengers = $12,
-             trip_type_id = $13,
-             status_id = $14
-         WHERE id = $15`,
+             start_date = $5,
+             start_time = $6,
+             end_date = $7,
+             end_time = $8,
+             requester_name = $9,
+             requester_position = $10,
+             supervisor_name = $11,
+             supervisor_position = $12,
+             department_id = $13,
+             passengers = $14,
+             trip_type_id = $15,
+             status_id = $16
+         WHERE id = $17`,
         [
           destination,
           purpose,
           normalizedFuelReimbursementId,
           distance !== '' && distance !== null && distance !== undefined ? Number(distance) : null,
-          start_time,
-          end_time,
+          startDateTime.date,
+          startDateTime.time,
+          endDateTime.date,
+          endDateTime.time,
           requester_name,
           requester_position,
           supervisor_name,
@@ -117,6 +150,13 @@ export async function PATCH(
           id,
         ]
       );
+
+      await publishBookingRealtime({
+        action: 'updated',
+        bookingId: Number(id),
+        bookingIds: [Number(id)],
+        tripId: null,
+      });
 
       return NextResponse.json({ message: 'Booking updated successfully' });
     }
@@ -133,13 +173,18 @@ export async function PATCH(
 
     if (targetIds.length > 1) {
       const bookingRows = await queryWithEncoding(
-        `SELECT id, start_time, end_time, trip_id
+        `SELECT id,
+                start_date::text AS start_date,
+                start_time::text AS start_time,
+                end_date::text AS end_date,
+                end_time::text AS end_time,
+                trip_id
          FROM bookings
          WHERE id = ANY($1::int[])`,
         [targetIds]
-      ) as { id: number; start_time: string; end_time: string; trip_id: number | null }[];
+      ) as { id: number; start_date: string | null; start_time: string; end_date: string | null; end_time: string; trip_id: number | null }[];
 
-      const dateKeys = Array.from(new Set(bookingRows.map((row) => toDateKey(row.start_time)).filter(Boolean)));
+      const dateKeys = Array.from(new Set(bookingRows.map((row) => toDateKey(row.start_date)).filter(Boolean)));
 
       if (dateKeys.length > 1 || bookingRows.length !== targetIds.length) {
         return NextResponse.json({ error: 'Trips can only be merged when departure date is the same' }, { status: 400 });
@@ -147,19 +192,34 @@ export async function PATCH(
     }
 
     const bookingRows = await queryWithEncoding(
-      `SELECT id, start_time, end_time, trip_id
+      `SELECT id,
+              start_date::text AS start_date,
+              start_time::text AS start_time,
+              end_date::text AS end_date,
+              end_time::text AS end_time,
+              trip_id
        FROM bookings
        WHERE id = ANY($1::int[])`,
       [targetIds]
-    ) as { id: number; start_time: string; end_time: string; trip_id: number | null }[];
+    ) as { id: number; start_date: string | null; start_time: string; end_date: string | null; end_time: string; trip_id: number | null }[];
 
     const baseBooking = bookingRows.find((row) => row.id === Number(id)) || bookingRows[0];
     if (!baseBooking) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
 
-    const tripStartDateTime = bookingRows.map((row) => row.start_time).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
-    const tripEndDateTime = bookingRows.map((row) => row.end_time).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+    const tripStartDateTime = bookingRows
+      .map((row) => buildBookingDateTimeString(row.start_date, row.start_time))
+      .filter((value): value is string => Boolean(value))
+      .sort((a, b) => getDateTimeSortValue(a) - getDateTimeSortValue(b))[0] ?? null;
+    const tripEndDateTime = bookingRows
+      .map((row) => buildBookingDateTimeString(row.end_date, row.end_time))
+      .filter((value): value is string => Boolean(value))
+      .sort((a, b) => getDateTimeSortValue(b) - getDateTimeSortValue(a))[0] ?? null;
+
+    if (!tripStartDateTime || !tripEndDateTime) {
+      return NextResponse.json({ error: 'Trip datetime could not be determined' }, { status: 400 });
+    }
 
     let tripId = baseBooking.trip_id;
 
@@ -208,6 +268,13 @@ export async function PATCH(
        WHERE id = ANY($5::int[])`,
       [tripId, normalizedCarId, normalizedDriverId, statusIds.assigned, targetIds]
     );
+
+    await publishBookingRealtime({
+      action: 'updated',
+      bookingId: Number(id),
+      bookingIds: targetIds,
+      tripId,
+    });
 
     return NextResponse.json({
       message: 'Bookings assigned successfully',
@@ -260,6 +327,13 @@ export async function DELETE(
         );
       }
     }
+
+    await publishBookingRealtime({
+      action: 'deleted',
+      bookingId: Number(id),
+      bookingIds: [Number(id)],
+      tripId,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

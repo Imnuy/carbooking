@@ -96,6 +96,27 @@ export async function ensureMasterDataSchema() {
     return;
   }
 
+  const [existingTables] = await queryWithEncoding(
+    `SELECT COUNT(*)::int AS count
+     FROM information_schema.tables
+     WHERE table_schema = 'public'
+       AND table_name IN (
+         'booking_status',
+         'car_type',
+         'driver_type',
+         'department',
+         'trip_type',
+         'fuel_reimbursement',
+         'user_role'
+       )`
+  ) as { count: number }[];
+
+  if (existingTables?.count === 7) {
+    masterDataSchemaReady = true;
+    cachedBookingStatusIds = null;
+    return;
+  }
+
   // Ensure all master tables exist with the clean schema: id, name, is_active
   await queryWithEncoding(`
     CREATE TABLE IF NOT EXISTS booking_status (

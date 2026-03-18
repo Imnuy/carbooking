@@ -40,7 +40,9 @@ interface BookingItem {
   distance?: number | string | null;
   purpose?: string | null;
   passengers?: number | string | null;
+  start_date?: string | null;
   start_time: string;
+  end_date?: string | null;
   car_id?: number | null;
   driver_id?: number | null;
   brand?: string | null;
@@ -84,6 +86,44 @@ function getTripTypeBadgeClass(tripTypeName: string | null | undefined) {
   return 'border-sky-200 bg-sky-50 text-sky-700';
 }
 
+function normalizeDatePart(value?: string | Date | null) {
+  if (!value) return '';
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return '';
+    return value.toISOString().split('T')[0];
+  }
+  const normalizedValue = String(value);
+  return normalizedValue.includes('T') ? normalizedValue.split('T')[0] : normalizedValue;
+}
+
+function normalizeTimePart(value?: string | Date | null) {
+  if (!value) return '';
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return '';
+    return value.toTimeString().slice(0, 5);
+  }
+  const normalizedValue = String(value);
+  return normalizedValue.length >= 5 ? normalizedValue.slice(0, 5) : normalizedValue;
+}
+
+function buildBookingDateTime(date?: string | Date | null, time?: string | Date | null) {
+  const normalizedDate = normalizeDatePart(date);
+  const normalizedTime = normalizeTimePart(time);
+  if (!normalizedDate || !normalizedTime) return null;
+  
+  // Parse date and time separately to avoid timezone issues
+  const [year, month, day] = normalizedDate.split('-').map(Number);
+  const [hours, minutes] = normalizedTime.split(':').map(Number);
+  
+  if (![year, month, day, hours, minutes].every((item) => Number.isFinite(item))) {
+    return null;
+  }
+  
+  // Create date using local timezone
+  const parsed = new Date(year, month - 1, day, hours, minutes, 0, 0);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export default function BookingListClient({ initialBookings, departments, sort, order, statusIds }: BookingListClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -103,19 +143,18 @@ export default function BookingListClient({ initialBookings, departments, sort, 
     [departments]
   );
 
-  const getBookingDateKey = (startTime: string) => {
-    const date = new Date(startTime);
-    if (Number.isNaN(date.getTime())) return '';
+  const getBookingDateKey = (booking: BookingItem) => {
+    const date = buildBookingDateTime(booking.start_date, booking.start_time);
+    if (!date) return '';
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
 
-  const isPastTravelDate = (startTime?: string) => {
-    if (!startTime) return false;
-    const bookingDate = new Date(startTime);
-    if (Number.isNaN(bookingDate.getTime())) return false;
+  const isPastTravelDate = (booking: BookingItem) => {
+    const bookingDate = buildBookingDateTime(booking.start_date, booking.start_time);
+    if (!bookingDate) return false;
     bookingDate.setHours(0, 0, 0, 0);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -124,7 +163,7 @@ export default function BookingListClient({ initialBookings, departments, sort, 
 
   const matchesTab = (booking: BookingItem) => {
     const isCancelled = booking.status_id === statusIds.rejected || booking.status_id === statusIds.cancelled;
-    const isTravelled = !isCancelled && isPastTravelDate(booking.start_time);
+    const isTravelled = !isCancelled && isPastTravelDate(booking);
 
     switch (activeTab) {
       case 'pending':
@@ -146,6 +185,37 @@ export default function BookingListClient({ initialBookings, departments, sort, 
     setDepartmentFilter(searchParams.get('department') ?? '');
     setTravelDateFilter(searchParams.get('date') ?? '');
   }, [searchParams]);
+
+  useEffect(() => {
+    let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+    const eventSource = new EventSource('/api/bookings/stream');
+
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data) as { type?: string };
+        if (payload.type === 'connected' || payload.type === 'heartbeat') {
+          return;
+        }
+      } catch {
+      }
+
+      if (refreshTimeout) {
+        return;
+      }
+
+      refreshTimeout = setTimeout(() => {
+        refreshTimeout = null;
+        router.refresh();
+      }, 150);
+    };
+
+    return () => {
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+      eventSource.close();
+    };
+  }, [router]);
 
   const createFilterQueryString = useMemo(
     () => (nextDepartment: string, nextDate: string, nextTab: BookingTab) => {
@@ -181,7 +251,7 @@ export default function BookingListClient({ initialBookings, departments, sort, 
 
   const filteredBookings = initialBookings.filter((booking) => {
     if (!matchesTab(booking)) return false;
-    if (travelDateFilter && getBookingDateKey(booking.start_time) !== travelDateFilter) return false;
+    if (travelDateFilter && getBookingDateKey(booking) !== travelDateFilter) return false;
     if (departmentFilter && booking.department_name !== departmentFilter) return false;
     return true;
   });
@@ -199,8 +269,8 @@ export default function BookingListClient({ initialBookings, departments, sort, 
       const firstSelectedBooking = filteredBookings.find((item) => item.id === prev[0]);
       if (!firstSelectedBooking) return [id];
 
-      const selectedDateKey = getBookingDateKey(firstSelectedBooking.start_time);
-      const currentDateKey = getBookingDateKey(booking.start_time);
+      const selectedDateKey = getBookingDateKey(firstSelectedBooking);
+      const currentDateKey = getBookingDateKey(booking);
 
       if (!selectedDateKey || !currentDateKey || selectedDateKey !== currentDateKey) return prev;
       return [...prev, id];
@@ -214,10 +284,10 @@ export default function BookingListClient({ initialBookings, departments, sort, 
     }
     const firstPendingBooking = pendingBookings[0];
     if (!firstPendingBooking) return;
-    const firstDateKey = getBookingDateKey(firstPendingBooking.start_time);
+    const firstDateKey = getBookingDateKey(firstPendingBooking);
     setSelectedIds(
       pendingBookings
-        .filter((booking) => getBookingDateKey(booking.start_time) === firstDateKey)
+        .filter((booking) => getBookingDateKey(booking) === firstDateKey)
         .map((booking) => booking.id)
     );
   };
@@ -251,7 +321,9 @@ export default function BookingListClient({ initialBookings, departments, sort, 
         trip_id: booking.trip_id ?? null,
         requester_name: booking.requester_name,
         destination: booking.destination,
+        start_date: booking.start_date ?? null,
         start_time: booking.start_time,
+        end_date: booking.end_date ?? booking.start_date ?? null,
         end_time: booking.end_time ?? booking.start_time,
         trip_type_id: booking.trip_type_id ?? null,
         passengers,
@@ -367,7 +439,7 @@ export default function BookingListClient({ initialBookings, departments, sort, 
                     checked={selectedIds.length > 0 && selectedIds.every((id) => {
                       const booking = pendingBookings.find((item) => item.id === id);
                       if (!booking || pendingBookings.length === 0) return false;
-                      return getBookingDateKey(booking.start_time) === getBookingDateKey(pendingBookings[0].start_time);
+                      return getBookingDateKey(booking) === getBookingDateKey(pendingBookings[0]);
                     })}
                     onChange={toggleSelectAll}
                     disabled={pendingBookings.length === 0}
@@ -423,10 +495,11 @@ export default function BookingListClient({ initialBookings, departments, sort, 
                 filteredBookings.map((b) => {
                   const isSelected = selectedIds.includes(b.id);
                   const displayName = b.requester_name || '-';
+                  const bookingStartDateTime = buildBookingDateTime(b.start_date, b.start_time);
                   const firstSelectedBooking = selectedIds.length > 0
                     ? filteredBookings.find((item) => item.id === selectedIds[0])
                     : null;
-                  const isSameTripDate = !firstSelectedBooking || getBookingDateKey(firstSelectedBooking.start_time) === getBookingDateKey(b.start_time);
+                  const isSameTripDate = !firstSelectedBooking || getBookingDateKey(firstSelectedBooking) === getBookingDateKey(b);
                   const passengerCount = typeof b.passengers === 'number'
                     ? b.passengers
                     : typeof b.passengers === 'string'
@@ -448,9 +521,22 @@ export default function BookingListClient({ initialBookings, departments, sort, 
                         <div className="text-xs font-medium text-slate-400">{b.id}</div>
                       </td>
                       <td className="px-3 py-5 align-top">
-                        <div className="text-sm font-medium text-slate-800">{new Date(b.start_time).toLocaleDateString('th-TH')}</div>
+                        <div className="text-sm font-medium text-slate-800">
+                          {b.start_date ? (() => {
+                            if ((b.start_date as any) instanceof Date) {
+                              return (b.start_date as unknown as Date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+                            }
+                            const dateStr = String(b.start_date);
+                            if (dateStr.includes('-')) {
+                              const [year, month, day] = dateStr.split('-').map(Number);
+                              const date = new Date(year, month - 1, day);
+                              return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+                            }
+                            return '-';
+                          })() : '-'}
+                        </div>
                         <div className="text-[11px] font-medium text-slate-400">
-                          {new Date(b.start_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                          {b.start_time ? b.start_time.slice(0, 5) : '-'}
                         </div>
                       </td>
                       <td className="px-3 py-5 align-top">
@@ -535,10 +621,11 @@ export default function BookingListClient({ initialBookings, departments, sort, 
             filteredBookings.map((b) => {
               const isSelected = selectedIds.includes(b.id);
               const displayName = b.requester_name || '-';
+              const bookingStartDateTime = buildBookingDateTime(b.start_date, b.start_time);
               const firstSelectedBooking = selectedIds.length > 0
                 ? filteredBookings.find((item) => item.id === selectedIds[0])
                 : null;
-              const isSameTripDate = !firstSelectedBooking || getBookingDateKey(firstSelectedBooking.start_time) === getBookingDateKey(b.start_time);
+              const isSameTripDate = !firstSelectedBooking || getBookingDateKey(firstSelectedBooking) === getBookingDateKey(b);
 
               return (
                 <div key={b.id} className={cn('space-y-6 p-6 transition-colors', isSelected && 'bg-[#eefaf0]')}>
@@ -593,9 +680,20 @@ export default function BookingListClient({ initialBookings, departments, sort, 
 
                   <div className="flex items-center justify-between">
                     <div className="text-[10px] font-bold capitalize text-slate-500">
-                      {new Date(b.start_time).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} •
+                      {b.start_date ? (() => {
+                        if ((b.start_date as any) instanceof Date) {
+                          return (b.start_date as unknown as Date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+                        }
+                        const dateStr = String(b.start_date);
+                        if (dateStr.includes('-')) {
+                          const [year, month, day] = dateStr.split('-').map(Number);
+                          const date = new Date(year, month - 1, day);
+                          return date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+                        }
+                        return '-';
+                      })() : '-'} •
                       <span className="ml-1 text-slate-900">
-                        {new Date(b.start_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                        {b.start_time ? String(b.start_time).slice(0, 5) : '-'}
                       </span>
                     </div>
                     <BookingActions booking={b} view="mobile" statusIds={statusIds} />
@@ -621,6 +719,8 @@ export default function BookingListClient({ initialBookings, departments, sort, 
             trip_id: activeBooking.trip_id ?? null,
             car_id: activeBooking.car_id ?? null,
             driver_id: activeBooking.driver_id ?? null,
+            start_date: activeBooking.start_date ?? null,
+            end_date: activeBooking.end_date ?? activeBooking.start_date ?? null,
           }}
           allowTripMerge={true}
           initialOtherIds={selectedIds.filter((id) => id !== activeBooking.id)}

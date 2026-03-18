@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS cars (
     car_type VARCHAR(100),
     is_active BOOLEAN DEFAULT true,
     image_url VARCHAR(255),
+    car_number VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(100),
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -38,7 +39,20 @@ CREATE TABLE IF NOT EXISTS cars (
 );
 ```
 
-### 3. driver_type (ประเภทพนักงานขับรถ)
+### 3. car_type (ประเภทรถ)
+
+```sql
+CREATE TABLE IF NOT EXISTS car_type (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(100),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(100)
+);
+```
+
+### 4. driver_type (ประเภทพนักงานขับรถ)
 
 ```sql
 CREATE TABLE IF NOT EXISTS driver_type (
@@ -52,7 +66,7 @@ CREATE TABLE IF NOT EXISTS driver_type (
 );
 ```
 
-### 4. drivers (พนักงานขับรถ)
+### 5. drivers (พนักงานขับรถ)
 
 ```sql
 CREATE TABLE IF NOT EXISTS drivers (
@@ -68,14 +82,13 @@ CREATE TABLE IF NOT EXISTS drivers (
 );
 ```
 
-### 5. booking_status (สถานะการจอง)
+### 6. booking_status (สถานะการจอง)
 
 ```sql
 CREATE TABLE IF NOT EXISTS booking_status (
     id SERIAL PRIMARY KEY,
     code VARCHAR(3) UNIQUE NOT NULL,
-    status VARCHAR(50) NOT NULL,
-    description TEXT,
+    name VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(100),
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -83,12 +96,13 @@ CREATE TABLE IF NOT EXISTS booking_status (
 );
 ```
 
-### 6. department (แผนก)
+### 7. department (แผนก/กลุ่มงาน)
 
 ```sql
 CREATE TABLE IF NOT EXISTS department (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(100),
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -96,7 +110,7 @@ CREATE TABLE IF NOT EXISTS department (
 );
 ```
 
-### 7. trip_type (ประเภททริป)
+### 8. trip_type (ประเภททริป)
 
 ```sql
 CREATE TABLE IF NOT EXISTS trip_type (
@@ -109,7 +123,7 @@ CREATE TABLE IF NOT EXISTS trip_type (
 );
 ```
 
-### 8. fuel_reimbursement (ค่าน้ำมัน)
+### 9. fuel_reimbursement (ค่าเชื้อเพลิง)
 
 ```sql
 CREATE TABLE IF NOT EXISTS fuel_reimbursement (
@@ -122,7 +136,7 @@ CREATE TABLE IF NOT EXISTS fuel_reimbursement (
 );
 ```
 
-### 9. trips (ทริป)
+### 10. trips (ทริป)
 
 ```sql
 CREATE TABLE IF NOT EXISTS trips (
@@ -145,27 +159,21 @@ CREATE TABLE IF NOT EXISTS trips (
 ```sql
 CREATE TABLE IF NOT EXISTS bookings (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER,
     requester_name VARCHAR(255),
     requester_position VARCHAR(255),
     car_id INTEGER,
-    driver_name VARCHAR(150),
     supervisor_name VARCHAR(255),
     supervisor_position VARCHAR(255),
-    start_time TIMESTAMP NOT NULL,
-    end_time TIMESTAMP NOT NULL,
+    start_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_date DATE NOT NULL,
+    end_time TIME NOT NULL,
     destination VARCHAR(255) NOT NULL,
     purpose TEXT,
-    fuel_reimbursement VARCHAR(100),
-    distance DECIMAL(10,2),
+    distance NUMERIC(10,2),
     passengers INTEGER,
-    trip_type VARCHAR(20) DEFAULT 'internal' CHECK (trip_type IN ('internal', 'external')),
-    status_code VARCHAR(3) DEFAULT '001' CHECK (status_code IN ('001', '002', '003', '004', '005')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_by VARCHAR(100),
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_by VARCHAR(100),
-    -- Additional fields from production DB
     trip_id INTEGER REFERENCES trips(id) ON DELETE SET NULL,
     driver_id INTEGER REFERENCES drivers(id) ON DELETE SET NULL,
     department_id INTEGER REFERENCES department(id),
@@ -180,6 +188,7 @@ CREATE TABLE IF NOT EXISTS bookings (
 ```
 users (1) ←→ (N) bookings  [NO CASCADE DELETE]
 cars (1) ←→ (N) bookings   [NO CASCADE DELETE]  
+car_type (1) ←→ (N) cars
 driver_type (1) ←→ (N) drivers
 booking_status (1) ←→ (N) bookings
 trips (1) ←→ (N) bookings
@@ -207,6 +216,7 @@ drivers (1) ←→ (N) bookings
 
 - `users` → `bookings` (ไม่มี foreign key constraint)
 - `cars` → `bookings` (ไม่มี foreign key constraint)
+- `car_type` → `cars` (มี constraint แต่ไม่มี cascade delete)
 - `driver_type` → `drivers` (มี constraint แต่ไม่มี cascade delete)
 - `booking_status` → `bookings` (มี constraint แต่ไม่มี cascade delete)
 - `department` → `bookings` (มี constraint แต่ไม่มี cascade delete)
@@ -238,30 +248,53 @@ ON CONFLICT (code) DO UPDATE SET driver_type = EXCLUDED.driver_type;
 ### สถานะการจอง
 
 ```sql
-INSERT INTO booking_status (code, status, description, created_by, updated_by)
+INSERT INTO booking_status (code, name, created_by, updated_by)
 VALUES 
-    ('001', 'รออนุมัติ', 'คำขอการจองรถยังไม่ได้รับการอนุมัติ', 'system', 'system'),
-    ('002', 'อนุมัติ', 'การจองรถได้รับการอนุมัติแล้ว', 'system', 'system'),
-    ('003', 'ปฏิเสธ', 'การจองรถถูกปฏิเสธ', 'system', 'system'),
-    ('004', 'เสร็จสิ้น', 'การจองรถเสร็จสิ้นแล้ว', 'system', 'system'),
-    ('005', 'ยกเลิก', 'การจองรถถูกยกเลิก', 'system', 'system')
+    ('001', 'รอจัดรถ', 'system', 'system'),
+    ('002', 'จัดรถแล้ว', 'system', 'system'),
+    ('003', 'เดินทางแล้ว', 'system', 'system'),
+    ('004', 'ยกเลิก', 'system', 'system')
 ON CONFLICT (code) DO UPDATE SET 
-    status = EXCLUDED.status, 
-    description = EXCLUDED.description;
+    name = EXCLUDED.name;
+```
+
+### ประเภททริป
+
+```sql
+INSERT INTO trip_type (name, created_by, updated_by)
+VALUES 
+    ('ภายในจังหวัด', 'system', 'system'),
+    ('ต่างจังหวัด', 'system', 'system')
+ON CONFLICT (name) DO UPDATE SET 
+    name = EXCLUDED.name;
+```
+
+### ค่าเชื้อเพลิง
+
+```sql
+INSERT INTO fuel_reimbursement (name, created_by, updated_by)
+VALUES 
+    ('เงินทดรอง', 'system', 'system'),
+    ('เงินสด', 'system', 'system'),
+    ('บัตรเติมน้ำมัน', 'system', 'system')
+ON CONFLICT (name) DO UPDATE SET 
+    name = EXCLUDED.name;
 ```
 
 ## Indexes สำหรับประสิทธิภาพ
 
 ```sql
 -- Indexes for bookings table
-CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON bookings(user_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_car_id ON bookings(car_id);
-CREATE INDEX IF NOT EXISTS idx_bookings_status_code ON bookings(status_code);
-CREATE INDEX IF NOT EXISTS idx_bookings_start_time ON bookings(start_time);
+CREATE INDEX IF NOT EXISTS idx_bookings_status_id ON bookings(status_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_start_date ON bookings(start_date);
+CREATE INDEX IF NOT EXISTS idx_bookings_department_id ON bookings(department_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_trip_type_id ON bookings(trip_type_id);
 
 -- Indexes for cars table
 CREATE INDEX IF NOT EXISTS idx_cars_license_plate ON cars(license_plate);
 CREATE INDEX IF NOT EXISTS idx_cars_is_active ON cars(is_active);
+CREATE INDEX IF NOT EXISTS idx_cars_car_type_id ON cars(car_type_id);
 
 -- Indexes for drivers table
 CREATE INDEX IF NOT EXISTS idx_drivers_is_active ON drivers(is_active);
@@ -269,6 +302,7 @@ CREATE INDEX IF NOT EXISTS idx_drivers_type_code ON drivers(driver_type_code);
 
 -- Indexes for status tables
 CREATE INDEX IF NOT EXISTS idx_booking_status_code ON booking_status(code);
+CREATE INDEX IF NOT EXISTS idx_department_is_active ON department(is_active);
 ```
 
 ## Trigger สำหรับอัพเดท timestamp
@@ -289,6 +323,10 @@ CREATE TRIGGER update_bookings_updated_at BEFORE UPDATE ON bookings FOR EACH ROW
 CREATE TRIGGER update_drivers_updated_at BEFORE UPDATE ON drivers FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_booking_status_updated_at BEFORE UPDATE ON booking_status FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_driver_type_updated_at BEFORE UPDATE ON driver_type FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_department_updated_at BEFORE UPDATE ON department FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_trip_type_updated_at BEFORE UPDATE ON trip_type FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_fuel_reimbursement_updated_at BEFORE UPDATE ON fuel_reimbursement FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_car_type_updated_at BEFORE UPDATE ON car_type FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
 ## การใช้งานผ่าน Docker
@@ -315,14 +353,23 @@ docker exec -i postgres psql -U admin -d carbooking -c "SELECT id, code, driver_
 docker exec -i postgres psql -U admin -d carbooking -c "SELECT id, fullname, driver_type_code, is_active FROM drivers ORDER BY id;"
 
 # ตรวจสอบสถานะการจอง
-docker exec -i postgres psql -U admin -d carbooking -c "SELECT id, code, status FROM booking_status ORDER BY code;"
+docker exec -i postgres psql -U admin -d carbooking -c "SELECT id, code, name FROM booking_status ORDER BY code;"
+
+# ตรวจสอบแผนก
+docker exec -i postgres psql -U admin -d carbooking -c "SELECT id, name, is_active FROM department ORDER BY id;"
+
+# ตรวจสอบประเภททริป
+docker exec -i postgres psql -U admin -d carbooking -c "SELECT id, name FROM trip_type ORDER BY id;"
+
+# ตรวจสอบค่าเชื้อเพลิง
+docker exec -i postgres psql -U admin -d carbooking -c "SELECT id, name FROM fuel_reimbursement ORDER BY id;"
 ```
 
 ### ตรวจสอบข้อมูลในตาราง transaction
 
 ```powershell
 # ตรวจสอบการจองทั้งหมด
-docker exec -i postgres psql -U admin -d carbooking -c "SELECT id, user_id, car_id, status_code, start_time, destination FROM bookings ORDER BY created_at DESC LIMIT 10;"
+docker exec -i postgres psql -U admin -d carbooking -c "SELECT id, requester_name, car_id, status_id, start_date, start_time, destination FROM bookings ORDER BY created_at DESC LIMIT 10;"
 ```
 
 ## บันทึกการเปลี่ยนแปลง (Change Log)
@@ -333,7 +380,15 @@ docker exec -i postgres psql -U admin -d carbooking -c "SELECT id, user_id, car_
   - เพิ่ม indexes และ triggers สำหรับประสิทธิภาพ
 
 - **Version 1.1** (2025-03-18): อัพเดทโครงสร้างให้ตรงกับ production database
-  - เพิ่ม Master Tables: department, trip_type, fuel_reimbursement, trips
+  - เพิ่ม Master Tables: department, trip_type, fuel_reimbursement, trips, car_type
   - อัพเดท bookings table: เพิ่มฟิลด์ trip_id, driver_id, department_id, trip_type_id, fuel_reimbursement_id, status_id
   - **เปลี่ยนแปลงสำคัญ**: ลบ foreign key constraint ระหว่าง users→bookings และ cars→bookings
   - คงไว้เฉพาะ ON DELETE SET NULL สำหรับ drivers→bookings และ trips→bookings
+
+- **Version 1.2** (2026-03-18): แยกวันที่และเวลาในตาราง bookings
+  - **เปลี่ยนแปลงสำคัญ**: แยกฟิลด์ start_time และ end_time จาก timestamp เป็น:
+    - start_date (DATE) + start_time (TIME)
+    - end_date (DATE) + end_time (TIME)
+  - อัปเดทโครงสร้างตาราง master tables ให้ครบถ้วน
+  - เพิ่ม is_active field ใน department table
+  - อัปเดต indexes และ triggers ให้ครบถ้วน

@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { queryWithEncoding } from '@/lib/db';
+import { splitDateTimeLocal } from '@/lib/booking-datetime';
+import { publishBookingRealtime } from '@/lib/booking-realtime';
 import { ensureTripsSchema } from '@/lib/booking-trip';
 import { ensureCarTypeSchema } from '@/lib/car-type';
 import {
@@ -81,6 +83,8 @@ export async function POST(request: Request) {
     const normalizedFuelReimbursementId = Number(fuel_reimbursement_id) || await getDefaultFuelReimbursementId();
     const normalizedDepartmentId = Number(department_id);
     const statusIds = await getBookingStatusIds();
+    const startDateTime = splitDateTimeLocal(start_time);
+    const endDateTime = splitDateTimeLocal(end_time);
 
     if (!requester_name || !requester_position || !supervisor_name || !supervisor_position) {
       return NextResponse.json({ error: 'Requester and supervisor information is required' }, { status: 400 });
@@ -112,7 +116,9 @@ export async function POST(request: Request) {
         purpose,
         fuel_reimbursement_id,
         distance,
+        start_date,
         start_time,
+        end_date,
         end_time,
         requester_name,
         requester_position,
@@ -123,15 +129,17 @@ export async function POST(request: Request) {
         trip_type_id,
         status_id,
         created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, CURRENT_TIMESTAMP)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, CURRENT_TIMESTAMP)
       RETURNING id`,
       [
         destination,
         purpose,
         normalizedFuelReimbursementId,
         distance !== '' && distance !== null && distance !== undefined ? Number(distance) : null,
-        start_time,
-        end_time,
+        startDateTime.date,
+        startDateTime.time,
+        endDateTime.date,
+        endDateTime.time,
         requester_name,
         requester_position,
         supervisor_name,
@@ -142,6 +150,13 @@ export async function POST(request: Request) {
         statusIds.pending,
       ]
     ) as { id: number }[];
+
+    await publishBookingRealtime({
+      action: 'created',
+      bookingId: result[0].id,
+      bookingIds: [result[0].id],
+      tripId: null,
+    });
 
     return NextResponse.json({ success: true, id: result[0].id });
   } catch (error) {

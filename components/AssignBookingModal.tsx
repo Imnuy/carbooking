@@ -14,10 +14,13 @@ interface AssignModalProps {
     requester_name: string;
     destination: string;
     trip_type_id?: number | null;
+    start_date?: string | null;
     start_time?: string;
+    end_date?: string | null;
     car_id: number | null;
     driver_id?: number | null;
     status_id?: number | null;
+    passengers?: number | string | null;
   };
   isOpen: boolean;
   onClose: () => void;
@@ -48,7 +51,9 @@ interface PendingBooking {
   trip_id?: number | null;
   requester_name: string;
   destination: string;
+  start_date?: string | null;
   start_time: string;
+  end_date?: string | null;
   end_time: string;
   trip_type_id: number | null;
   passengers: number;
@@ -56,6 +61,34 @@ interface PendingBooking {
 
 interface TripBookingItem extends PendingBooking {
   locked?: boolean;
+}
+
+function normalizeDatePart(value?: string | Date | null) {
+  if (!value) return '';
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return '';
+    return value.toISOString().split('T')[0];
+  }
+  const normalizedValue = String(value);
+  return normalizedValue.includes('T') ? normalizedValue.split('T')[0] : normalizedValue;
+}
+
+function normalizeTimePart(value?: string | Date | null) {
+  if (!value) return '';
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return '';
+    return value.toTimeString().slice(0, 5);
+  }
+  const normalizedValue = String(value);
+  return normalizedValue.length >= 5 ? normalizedValue.slice(0, 5) : normalizedValue;
+}
+
+function buildBookingDateTime(date?: string | Date | null, time?: string | Date | null) {
+  const normalizedDate = normalizeDatePart(date);
+  const normalizedTime = normalizeTimePart(time);
+  if (!normalizedDate || !normalizedTime) return null;
+  const parsed = new Date(`${normalizedDate}T${normalizedTime}`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 export default function AssignBookingModal({ booking, isOpen, onClose, initialOtherIds, initialMergeBookings, allowTripMerge = false }: AssignModalProps) {
@@ -135,10 +168,12 @@ export default function AssignBookingModal({ booking, isOpen, onClose, initialOt
       trip_id: booking.trip_id ?? null,
       requester_name: booking.requester_name,
       destination: booking.destination,
+      start_date: booking.start_date ?? null,
       start_time: booking.start_time ?? '',
+      end_date: booking.end_date ?? booking.start_date ?? null,
       end_time: booking.start_time ?? '',
       trip_type_id: booking.trip_type_id ?? null,
-      passengers: 0,
+      passengers: Number(booking.passengers) || 0,
       locked: true,
     },
     ...pendingBookings,
@@ -187,7 +222,21 @@ export default function AssignBookingModal({ booking, isOpen, onClose, initialOt
             </div>
             <div>
               <h3 className="text-xl font-black text-slate-900">จัดรถและพนักงานขับรถ</h3>
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">ทริป {booking.trip_id ? `#${booking.trip_id}` : 'ใหม่'}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                ทริป {booking.trip_id ? `#${booking.trip_id}` : 'ใหม่'} • 
+                {booking.start_date ? (() => {
+                  if ((booking.start_date as any) instanceof Date) {
+                    return (booking.start_date as unknown as Date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+                  }
+                  const dateStr = String(booking.start_date);
+                  if (dateStr.includes('-')) {
+                    const [year, month, day] = dateStr.split('-').map(Number);
+                    const date = new Date(year, month - 1, day);
+                    return date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+                  }
+                  return '-';
+                })() : '-'} • {booking.start_time ? String(booking.start_time).slice(0, 5) : '-'}
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="rounded-xl p-2 text-slate-400 transition-all hover:bg-white hover:text-slate-900">
@@ -244,6 +293,20 @@ export default function AssignBookingModal({ booking, isOpen, onClose, initialOt
                   {tripBookings.map((pendingBooking) => {
                     const isLocked = pendingBooking.locked;
                     const isSelected = isLocked || selectedOtherIds.includes(pendingBooking.id);
+                    // Create date display directly from database values to avoid timezone issues
+                    const bookingDateDisplay = pendingBooking.start_date ? (() => {
+                      if ((pendingBooking.start_date as any) instanceof Date) {
+                        return (pendingBooking.start_date as unknown as Date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+                      }
+                      const dateStr = String(pendingBooking.start_date);
+                      if (dateStr.includes('-')) {
+                        const [year, month, day] = dateStr.split('-').map(Number);
+                        const date = new Date(year, month - 1, day);
+                        return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+                      }
+                      return '-';
+                    })() : '-';
+                    const bookingTimeDisplay = pendingBooking.start_time ? String(pendingBooking.start_time).slice(0, 5) : '-';
                     return (
                       <div
                         key={pendingBooking.id}
@@ -279,8 +342,8 @@ export default function AssignBookingModal({ booking, isOpen, onClose, initialOt
                           </div>
                         </div>
                         <div className="shrink-0 text-right text-[11px] font-bold text-slate-400">
-                          <div>{pendingBooking.start_time ? new Date(pendingBooking.start_time).toLocaleDateString('th-TH') : '-'}</div>
-                          <div>{pendingBooking.start_time ? new Date(pendingBooking.start_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-'}</div>
+                          <div>{bookingDateDisplay}</div>
+                          <div>{bookingTimeDisplay}</div>
                           <div>{pendingBooking.passengers || 0} คน</div>
                         </div>
                       </div>

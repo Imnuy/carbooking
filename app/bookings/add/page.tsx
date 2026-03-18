@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import {
   Briefcase,
   Building2,
-  Calendar,
   Check,
   Loader2,
   MapPin,
@@ -14,6 +13,7 @@ import {
   User,
   Users,
 } from 'lucide-react';
+import DateTimePickerModal from '@/components/DateTimePickerModal';
 import { cn } from '@/lib/utils';
 
 interface MasterOption {
@@ -30,13 +30,31 @@ function toLocalDateTimeValue(date: Date) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+function parseLocalDateTime(value: string) {
+  if (!value) return null;
+
+  const [datePart, timePart = '00:00'] = value.split('T');
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hours, minutes] = timePart.split(':').map(Number);
+
+  if (![year, month, day, hours, minutes].every((item) => Number.isFinite(item))) {
+    return null;
+  }
+
+  return new Date(year, month - 1, day, hours, minutes, 0, 0);
+}
+
 export default function AddBookingPage() {
   const router = useRouter();
+  const today = new Date();
+  const maxStartDate = new Date();
+  maxStartDate.setDate(maxStartDate.getDate() + 45);
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState<MasterOption[]>([]);
   const [tripTypes, setTripTypes] = useState<MasterOption[]>([]);
   const [fuelOptions, setFuelOptions] = useState<MasterOption[]>([]);
   const [passengerCount, setPassengerCount] = useState(1);
+  const [tripTypeError, setTripTypeError] = useState(false);
   const [formData, setFormData] = useState({
     requester_name: '',
     requester_position: '',
@@ -59,6 +77,8 @@ export default function AddBookingPage() {
       return toLocalDateTimeValue(d);
     })(),
   });
+
+  const startDateTime = parseLocalDateTime(formData.start_time) ?? today;
 
   useEffect(() => {
     const fetchMaster = (url: string, setter: (data: MasterOption[]) => void, autoSelectField?: string) => {
@@ -89,7 +109,7 @@ export default function AddBookingPage() {
 
     // Validate trip type selection
     if (!formData.trip_type_id) {
-      alert('กรุณาเลือกประเภทการเดินทาง');
+      setTripTypeError(true);
       setLoading(false);
       return;
     }
@@ -112,11 +132,11 @@ export default function AddBookingPage() {
         router.refresh();
       } else {
         const result = await response.json().catch(() => null);
-        alert(result?.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+        // Error handled silently
       }
     } catch (error) {
       console.error(error);
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      // Error handled silently
     } finally {
       setLoading(false);
     }
@@ -217,11 +237,16 @@ export default function AddBookingPage() {
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => setFormData({ ...formData, trip_type_id: String(item.id) })}
+                    onClick={() => {
+                      setFormData({ ...formData, trip_type_id: String(item.id) });
+                      setTripTypeError(false);
+                    }}
                     className={cn(
                       'flex items-center justify-between rounded-2xl border-2 px-4 py-4 text-xs font-black transition-all md:px-8 md:py-5 md:text-sm',
                       formData.trip_type_id === String(item.id)
                         ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                        : tripTypeError
+                        ? 'border-rose-200 bg-rose-50 text-rose-600 hover:border-rose-300'
                         : 'border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-200'
                     )}
                   >
@@ -230,6 +255,11 @@ export default function AddBookingPage() {
                   </button>
                 ))}
               </div>
+              {tripTypeError && (
+                <p className="text-xs text-rose-600 font-medium">
+                  กรุณาเลือกประเภทการเดินทาง
+                </p>
+              )}
             </div>
             <div className="space-y-2 md:col-span-6">
               <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">สถานที่ไป</label>
@@ -291,27 +321,40 @@ export default function AddBookingPage() {
               />
             </div>
             <div className="space-y-2 md:col-span-3">
-              <label className="ml-1 flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">
-                <Calendar className="mr-1 h-3 w-3" /> วันเดินทางไป
-              </label>
-              <input
-                required
-                type="datetime-local"
+              <DateTimePickerModal
+                label="วันเดินทางไป"
                 value={formData.start_time}
-                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
+                onChange={(value) => {
+                  const nextStartDateTime = parseLocalDateTime(value);
+                  const currentEndDateTime = parseLocalDateTime(formData.end_time);
+
+                  setFormData((current) => ({
+                    ...current,
+                    start_time: value,
+                    end_time:
+                      nextStartDateTime && currentEndDateTime && currentEndDateTime < nextStartDateTime
+                        ? (() => {
+                            const nextDefaultEndDateTime = new Date(nextStartDateTime);
+                            nextDefaultEndDateTime.setHours(16, 30, 0, 0);
+                            return nextDefaultEndDateTime >= nextStartDateTime
+                              ? toLocalDateTimeValue(nextDefaultEndDateTime)
+                              : value;
+                          })()
+                        : current.end_time,
+                  }));
+                }}
+                minDate={today}
+                maxDate={maxStartDate}
+                required
               />
             </div>
             <div className="space-y-2 md:col-span-3">
-              <label className="ml-1 flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400 md:text-[11px]">
-                <Calendar className="mr-1 h-3 w-3" /> วันเดินทางกลับ
-              </label>
-              <input
-                required
-                type="datetime-local"
+              <DateTimePickerModal
+                label="วันเดินทางกลับ"
                 value={formData.end_time}
-                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                className="w-full rounded-xl bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all focus:ring-2 focus:ring-indigo-600 md:rounded-2xl md:px-6 md:py-4 md:text-base"
+                onChange={(value) => setFormData({ ...formData, end_time: value })}
+                minDate={startDateTime}
+                required
               />
             </div>
           </div>

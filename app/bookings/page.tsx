@@ -16,8 +16,13 @@ export default async function BookingsPage({
   const order = typeof params.order === 'string' ? params.order.toLowerCase() : 'asc';
 
   const validSortColumns = ['id', 'start_time', 'created_at'];
-  const orderBy = validSortColumns.includes(sort) ? `b.${sort}` : 'b.start_time';
   const sortOrder = order === 'desc' ? 'DESC' : 'ASC';
+  const orderBy =
+    sort === 'start_time'
+      ? `b.start_date ${sortOrder}, b.start_time ${sortOrder}`
+      : validSortColumns.includes(sort)
+        ? `b.${sort} ${sortOrder}`
+        : `b.start_date ${sortOrder}, b.start_time ${sortOrder}`;
 
   await ensureTripsSchema();
   await ensureCarTypeSchema();
@@ -48,7 +53,7 @@ export default async function BookingsPage({
      LEFT JOIN booking_status bs ON b.status_id = bs.id
      LEFT JOIN trip_type tt ON b.trip_type_id = tt.id
      LEFT JOIN department dp ON b.department_id = dp.id
-     ORDER BY ${orderBy} ${sortOrder}`
+     ORDER BY ${orderBy}`
   );
 
   return (

@@ -30,7 +30,7 @@ export default function Sidebar({ isOpen, isCollapsed = false, onClose }: Sideba
 
   return (
     <div className={cn(
-      "fixed inset-y-0 left-0 z-50 bg-white text-[#245239] transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 p-2.5 flex flex-col border-r border-[#bde7c6] shadow-sm",
+      "fixed inset-y-0 left-0 z-50 bg-white text-[#245239] transition-all duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:self-start lg:overflow-y-auto p-2.5 flex flex-col border-r border-[#bde7c6] shadow-sm",
       isCollapsed ? "w-12" : "w-56",
       isOpen ? "translate-x-0" : "-translate-x-full"
     )}>
