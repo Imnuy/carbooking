@@ -54,7 +54,7 @@ export default function CarActions({ car }: CarActionsProps) {
   };
 
   return (
-    <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div className="flex items-center justify-end space-x-2">
       <button
         onClick={() => setIsEditModalOpen(true)}
         className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-600 hover:text-amber-500 hover:border-amber-100 hover:shadow-lg transition-all shadow-sm"
