@@ -224,7 +224,6 @@ export default function AddBookingPage() {
                         ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
                         : 'border-slate-50 bg-slate-50 text-slate-400 hover:border-slate-200'
                     )}
-                    required
                   >
                     <span>{index + 1}. {item.name}</span>
                     {formData.trip_type_id === String(item.id) && <Check className="h-4 w-4" />}
