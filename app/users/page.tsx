@@ -12,6 +12,8 @@ type UserRow = {
   created_at: string;
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function UsersPage() {
   await ensureMasterDataSchema();
   const users = await queryWithEncoding(

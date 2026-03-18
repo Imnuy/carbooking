@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { queryWithEncoding } from '@/lib/db';
 import { ensureCarTypeSchema, resolveCarTypeId } from '@/lib/car-type';

@@ -4,6 +4,8 @@ import { ensureTripsSchema } from '@/lib/booking-trip';
 import { ensureCarTypeSchema } from '@/lib/car-type';
 import { ensureMasterDataSchema, getBookingStatusIds, getDepartments } from '@/lib/master-data';
 
+export const dynamic = 'force-dynamic';
+
 export default async function BookingsPage({
   searchParams,
 }: {

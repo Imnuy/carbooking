@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { queryWithEncoding } from '@/lib/db';
 import EditBookingForm from '@/components/EditBookingForm';
 import { ensureMasterDataSchema } from '@/lib/master-data';

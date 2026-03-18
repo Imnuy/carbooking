@@ -14,6 +14,8 @@ type CarRow = {
   is_active: boolean;
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function CarsPage() {
   await ensureCarTypeSchema();
   const cars = await queryWithEncoding(
